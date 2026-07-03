@@ -1,0 +1,23 @@
+# params needed for msprime simulations
+#-----------------------------------------------------------------------------------------------------------------------
+output_prefix: humnea_woi
+ploidy: 2 # diploid
+nref: 108 # number of samples in reference population (here YRI)
+ntgt: 99 # number of samples in target population (here CEU)
+ref_id: YRI # identifier for ref pop
+tgt_id: CEU # identifier for target pop
+src_id: Nea # identifier for source pop of introg material
+rec_rate: 1.0e-8 # recombination rate
+mut_rate: 1.2e-8 # mutation rate
+seq_len: 1000000 # 1Mb
+#binary: True # which is recommended binary mutations or not? test w/out binary mutations
+win_step: 10000 # default val for this?
+nrep: 10 # testing, default val?
+demog_id: HumanNeanderthal_4G21
+#demes_file: config/demog/HumanNeanderthal_4G21.yaml # yaml file of demography for msprime simns with archaic introgression (Nea -> CEU)
+#-----------------------------------------------------------------------------------------------------------------------
+# to generate msprime simns w/out introgression, ie to test methods performance in scenario of no introgression, use this yaml file:
+demes_file: config/demog/HumanNeanderthal_4G21_no_introgression.yaml
+#-----------------------------------------------------------------------------------------------------------------------
+
+no_intro_demes_file: config/demog/HumanNeanderthal_4G21_no_introgression.yaml

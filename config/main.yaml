@@ -1,0 +1,38 @@
+#scenarios: ["config_ArchIE_4D19_1", "config_ArchIE_4D19_woi_1", "config_HumanNeanderthal_4G21_1", "config_HumanNeanderthal_4G21_woi_1"]
+#scenarios: ["config_ArchIE_4D19_1"]
+scenarios: ["humnea_50_10"]
+
+
+results_folder: "results_humnea_50_10b"
+#test_data_folder: "test_data_including_maps"
+test_data_folder: "test_data_humnea_50_10b"
+
+#scenario_subfolder: "including_maps"
+
+pr_plots_to_create : {"config_ArchIE_4D19_1": "ArchIE model", "config_HumanNeanderthal_4G21_1": "HumanNeanderthal"}
+confusion_plots_to_create : {"config_ArchIE_4D19_1": "ArchIE model", "config_ArchIE_4D19_woi_1": "ArchIE model woi",  "config_HumanNeanderthal_4G21_1": "HumanNeanderthal" ,  "config_HumanNeanderthal_4G21_woi_1": "HumanNeanderthal"}
+
+extra_text: {"config_ArchIE_4D19_woi_1": "No Introgression", "config_HumanNeanderthal_4G21_woi_1": "No Introgression"}
+
+models_for_plotting: {"sprime", "sstar", "hmmix_classic", "hmmix_artemis"}
+
+# currently not used (perhaps necessary for PR_curves of multiple models / settings)
+
+colors : {
+    'sstar': 'blue',
+    'skovhmm': 'green',
+    'sprime': 'orange',
+    'ArchIE': 'magenta',
+}
+
+titles : {
+    'HumanNeanderthal': 'Human-Neanderthal model',
+    'BonoboGhost': 'Bonobo-Ghost model',
+    'HumanNeanderthalDenisovan': 'Human-Neanderthal-Denisovan model',
+    'ChimpBonoboGhost': 'Chimpanzee-Ghost-Bonobo model',
+}
+
+markers : {
+    'nref_10_ntgt_1': {'symbol':'.', 'size': 6},
+    'nref_50_ntgt_1': {'symbol':'*', 'size': 6},
+}

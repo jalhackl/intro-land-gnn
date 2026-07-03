@@ -1,0 +1,27 @@
+#-----------------------------------------------------------------------------------------------------------------------
+output_prefix: humnea
+ploidy: 2 # diploid
+nref: 108 # number of samples in reference population (here YRI)
+ntgt: 99 # number of samples in target population (here CEU)
+ref_id: YRI
+tgt_id: CEU
+src_id: Nea
+rec_rate: 1.0e-8
+mut_rate: 1.2e-8
+seq_len: 25000000 # 25Mb
+#binary: True # which is recommended binary mutations or not? test w/out binary mutations
+win_step: 10000 # default val for this?
+nrep: 10 # testing, default val?
+
+cutoff_num: 10 # for the precision-recall curves
+demog_id: HumanNeanderthal_4G21
+#demes_file: config/demog/HumanNeanderthal_4G21_no_introgression.yaml # msprime simns model w/out introgression - test tools where no introgression
+demes_file: config/demog/HumanNeanderthal_4G21.yaml # msprime simns model w archaic introgression
+
+# for ms glm simulations, 1 target individual is simulated, number of ref individuals to match number of outgroup individuals
+sstar_ms_params: {"true": {"yaml": "./config/demog/HumanNeanderthal_4G21_no_introgression.yaml", samples: [0, 0, 2, 216]}}
+scenarios: ["true"]
+score_seqlen: 50000
+ms_seq_len: 50000 
+#-----------------------------------------------------------------------------------------------------------------------
+

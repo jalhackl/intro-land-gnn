@@ -1,0 +1,7 @@
+demes
+msprime
+numpy
+pandas
+scikit-allel
+scikit-learn
+scipy

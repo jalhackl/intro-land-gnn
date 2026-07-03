@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: gaishisim
+Version: 1.0.0
+Requires-Dist: demes
+Requires-Dist: msprime
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scikit-allel
+Requires-Dist: scikit-learn
+Requires-Dist: scipy
+Dynamic: requires-dist

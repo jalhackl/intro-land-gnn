@@ -1,0 +1,19 @@
+#-----------------------------------------------------------------------------------------------------------------------
+#outgroup_ids: test/sim/0/humnea.0.ref.ind.list
+#ingroup_ids: test/sim/0/humnea.0.tgt.ind.list
+#list_vcfs: 'test/sim/0/humnea.0.vcf,test/sim/1/humnea.1.vcf,test/sim/2/humnea.2.vcf'
+#demog: test
+#scen: humnea
+#ind: [tsk_108,tsk_109,tsk_110,tsk_111,tsk_112,tsk_113,tsk_114,tsk_115,tsk_116,tsk_117,tsk_118,tsk_119,tsk_120,tsk_121,tsk_122,tsk_123,tsk_124,tsk_125,tsk_126,tsk_127,tsk_128,tsk_129,tsk_130,tsk_131,tsk_132,tsk_133,tsk_134,tsk_135,tsk_136,tsk_137,tsk_138,tsk_139,tsk_140,tsk_141,tsk_142,tsk_143,tsk_144,tsk_145,tsk_146,tsk_147,tsk_148,tsk_149,tsk_150,tsk_151,tsk_152,tsk_153,tsk_154,tsk_155,tsk_156,tsk_157,tsk_158,tsk_159,tsk_160,tsk_161,tsk_162,tsk_163,tsk_164,tsk_165,tsk_166,tsk_167,tsk_168,tsk_169,tsk_170,tsk_171,tsk_172,tsk_173,tsk_174,tsk_175,tsk_176,tsk_177,tsk_178,tsk_179,tsk_180,tsk_181,tsk_182,tsk_183,tsk_184,tsk_185,tsk_186,tsk_187,tsk_188,tsk_189,tsk_190,tsk_191,tsk_192,tsk_193,tsk_194,tsk_195,tsk_196,tsk_197,tsk_198,tsk_199,tsk_200,tsk_201,tsk_202,tsk_203,tsk_204,tsk_205,tsk_206]
+
+#-----------------------------------------------------------------------------------------------------------------------
+seed: 0
+output_dir: test/sim
+output_prefix: humnea.0
+skov_output_dir: test/hmmix
+nref: 108
+ntgt: 99
+ref_id: YRI
+tgt_id: CEU
+src_id: Nea
+

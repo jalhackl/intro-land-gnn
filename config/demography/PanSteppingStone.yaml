@@ -1,0 +1,186 @@
+time_units: generations
+generation_time: 1
+demes:
+- name: Tw__0
+  epochs:
+  - {end_time: 23540.0, start_size: 7000.0}
+  - {end_time: 0, start_size: 600.0}
+- name: Tw__1
+  epochs:
+  - {end_time: 23540.0, start_size: 7000.0}
+  - {end_time: 0, start_size: 600.0}
+- name: Tw__2
+  epochs:
+  - {end_time: 23540.0, start_size: 7000.0}
+  - {end_time: 0, start_size: 600.0}
+- name: Tw__3
+  epochs:
+  - {end_time: 23540.0, start_size: 7000.0}
+  - {end_time: 0, start_size: 600.0}
+- name: Tw__4
+  epochs:
+  - {end_time: 23540.0, start_size: 7000.0}
+  - {end_time: 0, start_size: 600.0}
+- name: P__0
+  start_time: 75200.0
+  ancestors: [Tw__4]
+  epochs:
+  - {end_time: 0, start_size: 4000.0}
+- name: P__1
+  start_time: 75192.0
+  ancestors: [P__0]
+  epochs:
+  - {end_time: 0, start_size: 4000.0}
+- name: P__2
+  start_time: 75184.0
+  ancestors: [P__1]
+  epochs:
+  - {end_time: 0, start_size: 4000.0}
+- name: P__3
+  start_time: 75176.0
+  ancestors: [P__2]
+  epochs:
+  - {end_time: 0, start_size: 4000.0}
+- name: P__4
+  start_time: 75168.0
+  ancestors: [P__3]
+  epochs:
+  - {end_time: 0, start_size: 4000.0}
+- name: Tc__0
+  start_time: 23540.0
+  ancestors: [Tw__4]
+  epochs:
+  - {end_time: 0, start_size: 9462.8}
+- name: Tc__1
+  start_time: 23532.0
+  ancestors: [Tc__0]
+  epochs:
+  - {end_time: 0, start_size: 9462.8}
+- name: Tc__2
+  start_time: 23524.0
+  ancestors: [Tc__1]
+  epochs:
+  - {end_time: 0, start_size: 9462.8}
+- name: Tc__3
+  start_time: 23516.0
+  ancestors: [Tc__2]
+  epochs:
+  - {end_time: 0, start_size: 9462.8}
+- name: Tc__4
+  start_time: 23508.0
+  ancestors: [Tc__3]
+  epochs:
+  - {end_time: 0, start_size: 9462.8}
+- name: Tnc__0
+  start_time: 10000.0
+  ancestors: [Tw__4]
+  epochs:
+  - {end_time: 0, start_size: 5559.0}
+- name: Tnc__1
+  start_time: 9992.0
+  ancestors: [Tnc__0]
+  epochs:
+  - {end_time: 0, start_size: 5559.0}
+- name: Tnc__2
+  start_time: 9984.0
+  ancestors: [Tnc__1]
+  epochs:
+  - {end_time: 0, start_size: 5559.0}
+- name: Tnc__3
+  start_time: 9976.0
+  ancestors: [Tnc__2]
+  epochs:
+  - {end_time: 0, start_size: 5559.0}
+- name: Tnc__4
+  start_time: 9968.0
+  ancestors: [Tnc__3]
+  epochs:
+  - {end_time: 0, start_size: 5559.0}
+- name: Te__0
+  start_time: 6420.0
+  ancestors: [Tc__4]
+  epochs:
+  - {end_time: 0, start_size: 6498.4}
+- name: Te__1
+  start_time: 6412.0
+  ancestors: [Te__0]
+  epochs:
+  - {end_time: 0, start_size: 6498.4}
+- name: Te__2
+  start_time: 6404.0
+  ancestors: [Te__1]
+  epochs:
+  - {end_time: 0, start_size: 6498.4}
+- name: Te__3
+  start_time: 6396.0
+  ancestors: [Te__2]
+  epochs:
+  - {end_time: 0, start_size: 6498.4}
+- name: Te__4
+  start_time: 6388.0
+  ancestors: [Te__3]
+  epochs:
+  - {end_time: 0, start_size: 6498.4}
+migrations:
+- demes: [Tw__0, Tw__1]
+  rate: 0.00011
+  end_time: 23540.0
+- demes: [Tw__1, Tw__2]
+  rate: 0.00011
+  end_time: 23540.0
+- demes: [Tw__2, Tw__3]
+  rate: 0.00011
+  end_time: 23540.0
+- demes: [Tw__3, Tw__4]
+  rate: 0.00011
+  end_time: 23540.0
+- demes: [P__0, P__1]
+  rate: 0.00011
+- demes: [P__1, P__2]
+  rate: 0.00011
+- demes: [P__2, P__3]
+  rate: 0.00011
+- demes: [P__3, P__4]
+  rate: 0.00011
+- demes: [Tw__0, Tw__1]
+  rate: 0.01
+  start_time: 23540.0
+- demes: [Tw__1, Tw__2]
+  rate: 0.01
+  start_time: 23540.0
+- demes: [Tw__2, Tw__3]
+  rate: 0.01
+  start_time: 23540.0
+- demes: [Tw__3, Tw__4]
+  rate: 0.01
+  start_time: 23540.0
+- demes: [Tc__0, Tc__1]
+  rate: 0.01
+- demes: [Tc__1, Tc__2]
+  rate: 0.01
+- demes: [Tc__2, Tc__3]
+  rate: 0.01
+- demes: [Tc__3, Tc__4]
+  rate: 0.01
+- demes: [Tnc__0, Tnc__1]
+  rate: 0.01
+- demes: [Tnc__1, Tnc__2]
+  rate: 0.01
+- demes: [Tnc__2, Tnc__3]
+  rate: 0.01
+- demes: [Tnc__3, Tnc__4]
+  rate: 0.01
+- demes: [Te__0, Te__1]
+  rate: 0.01
+- demes: [Te__1, Te__2]
+  rate: 0.01
+- demes: [Te__2, Te__3]
+  rate: 0.01
+- demes: [Te__3, Te__4]
+  rate: 0.01
+- demes: [Tw__4, Tnc__0]
+  rate: 0.0008
+- demes: [Tnc__4, Tc__0]
+  rate: 0.0008
+- demes: [Tc__4, Te__0]
+  rate: 0.0008

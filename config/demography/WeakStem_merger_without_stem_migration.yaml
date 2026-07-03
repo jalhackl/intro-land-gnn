@@ -1,0 +1,110 @@
+description: Best fit merger-without-stem-migration model; LL = -107694
+time_units: years
+generation_time: 29
+demes:
+- name: anc
+  description: Ancestral population
+  epochs:
+  - {end_time: 400282.1409430888, start_size: 10991.304687028765}
+- name: stem1
+  description: First stem
+  ancestors: [anc]
+  epochs:
+  - {end_time: 281574.04821461055, start_size: 277.8920906396176}
+- name: stem1E
+  description: stem 1 splits and this branch contributes to E Afr
+  ancestors: [stem1]
+  epochs:
+  - {end_time: 95047.12981419194, start_size: 9016.327931815935}
+- name: stem1S
+  description: stem 1 splits and this branch contributes to S Afr
+  ancestors: [stem1]
+  epochs:
+  - {end_time: 112301.86898831153, start_size: 12637.708828138351}
+- name: stem2
+  description: Second stem
+  ancestors: [anc]
+  epochs:
+  - {end_time: 23508.88695803448, start_size: 27848.853480761456}
+- name: Vindija
+  description: Neanderthal lineage leading to Vindija sample
+  start_time: 550000
+  ancestors: [anc]
+  epochs:
+  - {end_time: 50000, start_size: 2095.8010688117383}
+- name: NI
+  description: Introgressing Neanderthal lineage
+  start_time: 80000
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 45000, start_size: 2095.8010688117383}
+- name: Nama
+  description: Branch leading to Nama
+  start_time: 112301.86898831153
+  ancestors: [stem1S, stem2]
+  proportions: [0.26926674522327865, 0.7307332547767214]
+  epochs:
+  - {end_time: 261, start_size: 12637.708828138351}
+  - {end_time: 0, start_size: 227.02502431321975}
+- name: Gumuz
+  description: E. African branch leading to Gumuz
+  start_time: 95047.12981419194
+  ancestors: [stem1E, stem2]
+  proportions: [0.47831666018070973, 0.5216833398192903]
+  epochs:
+  - {end_time: 5000, start_size: 9016.327931815935}
+  - {end_time: 0, start_size: 3435.818984728939}
+- name: MSL
+  description: W. African branch leading to Mende
+  start_time: 60000
+  ancestors: [Gumuz]
+  epochs:
+  - {end_time: 5000, start_size: 11189.846372353482}
+  - {end_time: 0, start_size: 27444.772153068297}
+- name: GBR
+  description: Eurasian branch leading to British
+  start_time: 50000
+  ancestors: [Gumuz]
+  epochs:
+  - {end_time: 0, start_size: 921.614675172628, end_size: 12019.164933859778}
+- name: EP
+  description: Admixed E. African agriculturalist branch
+  start_time: 12000
+  ancestors: [Gumuz, GBR]
+  proportions: [0.3593403354628119, 0.640659664537188]
+  epochs:
+  - {end_time: 0, start_size: 13678.065438110638}
+migrations:
+- demes: [Nama, MSL]
+  rate: 2.2916915846599623e-06
+- demes: [Nama, Gumuz]
+  rate: 4.1495393998262904e-05
+- demes: [Nama, EP]
+  rate: 4.1495393998262904e-05
+- demes: [MSL, Gumuz]
+  rate: 0.0001993124842287822
+- demes: [MSL, EP]
+  rate: 0.0001993124842287822
+- demes: [Gumuz, GBR]
+  rate: 3.986766037475133e-05
+- demes: [GBR, EP]
+  rate: 3.986766037475133e-05
+- demes: [Gumuz, EP]
+  rate: 0.00035536010231539226
+pulses:
+- sources: [NI]
+  dest: GBR
+  time: 45000
+  proportions: [0.015]
+- sources: [stem2]
+  dest: MSL
+  time: 23508.88695803448
+  proportions: [0.1827805047196123]
+- sources: [EP]
+  dest: Nama
+  time: 2000
+  proportions: [0.2572961266799322]
+- sources: [GBR]
+  dest: Nama
+  time: 290
+  proportions: [0.15574118021601932]

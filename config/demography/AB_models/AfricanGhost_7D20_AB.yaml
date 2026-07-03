@@ -1,0 +1,87 @@
+# Generated with demes
+# ms parameters are based on Section S9 Model C.2 in https://doi.org/10.1126/sciadv.aax5097 by assuming ${admix} = 0.98
+# demes ms -N0 10000 -I 4 100 100 1 1 -en 0 3 0.1 -en 0 4 0.1 -es 0.04310345 1 0.97 -es 0.04310345 2 ${admix} -ej 0.05387931 5 3 -ej 0.05387931 2 1 -es 0.2155172 4 0.94 -en 0.2155172 7 0.2 -es 0.2836207 3 0.95 -ej 0.2836207 8 1 -ej 0.3577586 4 3 -ej 0.4741379 3 1 -ej 0.6 6 1 -ej 0.7844828 7 1
+#
+# deme1 = Eur
+# deme2 = West_Afr
+# deme3 = Nea
+# deme4 = Den
+# deme5 = NeaA
+# deme6 = Ghost
+# deme7 = UA
+doi: 
+    - https://doi.org/10.1126/sciadv.aax5097
+time_units: generations
+generation_time: 1
+demes:
+    - name: B
+      epochs:
+          - {end_time: 0, start_size: 39200}
+    - name: A
+      start_time: 51724.137931034486
+      ancestors: [B]
+      epochs:
+          - {end_time: 43103.44827586207, start_size: 1000}
+          - {end_time: 27586.206896551725, start_size: 7000.0}
+          - {end_time: 22413.793103448275, start_size: 12000.0}
+          - {end_time: 18103.44827586207, start_size: 14000.0}
+          - {end_time: 14655.172413793103, start_size: 16000.0}
+          - {end_time: 12068.965517241379, start_size: 25000.0}
+          - {end_time: 0, start_size: 30000.0}
+    - name: UA
+      start_time: 31379.312
+      ancestors: [A, B]
+      proportions: [0.99, 0.01]
+      epochs:
+          - {end_time: 8620.688, start_size: 2000.0}
+    - name: Ghost
+      start_time: 24000.0
+      ancestors: [A, B]
+      proportions: [0.99, 0.01]
+      epochs:
+          - {end_time: 1724.1380000000001, start_size: 10000.0}
+    - name: Nea
+      start_time: 18965.516
+      ancestors: [A, B]
+      proportions: [0.99, 0.01]
+      epochs:
+          - {end_time: 0, start_size: 1000.0}
+    - name: Den
+      start_time: 14310.344
+      ancestors: [A, B]
+      proportions: [0.99, 0.01]
+      epochs:
+          - {end_time: 0, start_size: 1000.0}
+    - name: Eur
+      start_time: 10344.827586206897
+      ancestors: [A, B]
+      proportions: [0.8, 0.2]
+      epochs:
+          - {end_time: 0, start_size: 10000.0}
+    - name: West_Afr
+      start_time: 2155.1724
+      ancestors: [Eur]
+      epochs:
+          - {end_time: 0, start_size: 10000.0}
+    - name: NeaA
+      start_time: 2155.1724
+      ancestors: [Nea]
+      epochs:
+          - {end_time: 1724.1380000000001, start_size: 10000.0}
+pulses:
+    - sources: [A]
+      dest: Nea
+      time: 11344.828
+      proportions: [0.050000000000000044]
+    - sources: [UA]
+      dest: Den
+      time: 8620.688
+      proportions: [0.06000000000000005]
+    - sources: [Ghost]
+      dest: West_Afr
+      time: 1724.1380000000001
+      proportions: [0.020000000000000018]
+    - sources: [NeaA]
+      dest: Eur
+      time: 1724.1380000000001
+      proportions: [0.030000000000000027]

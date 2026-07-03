@@ -1,0 +1,11 @@
+name: introscape-trace
+channels:
+        - conda-forge
+        - bioconda
+dependencies:
+  - pip
+  - setuptools
+  - wheel
+  - python=3.10
+  - pip:
+    - git+https://github.com/YulinZhang9806/trace.git

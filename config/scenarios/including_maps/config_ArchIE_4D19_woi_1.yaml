@@ -1,0 +1,24 @@
+# params needed for msprime simulations
+#-----------------------------------------------------------------------------------------------------------------------
+output_prefix: archie
+ploidy: 2 # diploid
+nref: 50 # number of samples in reference population 
+ntgt: 10 # number of samples in target population 
+ref_id: Ref # identifier for ref pop
+tgt_id: Tgt # identifier for target pop
+src_id: Ghost # identifier for source pop of introg material
+rec_rate: 1e-8 # recombination rate
+mut_rate: 1.25e-8 # mutation rate
+seq_len: 25000000 # 25Mb
+#binary: True # which is recommended binary mutations or not? test w/out binary mutations
+win_step: 10000 # default val for this?
+nrep: 10 # testing, default val?
+demog_id: ArchIE_4D19
+#demes_file: config/demog/ArchIE_4D19.yaml # yaml file of demography for msprime simns with archaic introgression (Nea -> CEU)
+#-----------------------------------------------------------------------------------------------------------------------
+# to generate msprime simns w/out introgression, ie to test methods performance in scenario of no introgression, use this yaml file:
+demes_file: config/demog/ArchIE_4D19_no_introgression.yaml
+
+#-----------------------------------------------------------------------------------------------------------------------
+mut_map: exponential
+rec_map: config/maps/recombination/Palsson/palsson.CO.maps.avg.tsv

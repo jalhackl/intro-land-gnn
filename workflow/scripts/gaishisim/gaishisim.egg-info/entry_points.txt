@@ -1,0 +1,2 @@
+[console_scripts]
+gaishisim = gaishisim.__main__:main

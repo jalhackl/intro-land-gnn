@@ -1,0 +1,86 @@
+description: Best fit single-origin model; LL = -189271
+time_units: years
+generation_time: 29
+demes:
+- name: anc
+  description: Ancestral population
+  epochs:
+  - {end_time: 550000, start_size: 9856.8720811462}
+- name: MH
+  description: Post-Neanderthal split lineage to modern humans
+  ancestors: [anc]
+  epochs:
+  - {end_time: 110930.89905039832, start_size: 20846.785233348837}
+- name: Vindija
+  description: Neanderthal lineage leading to Vindija sample
+  ancestors: [anc]
+  epochs:
+  - {end_time: 50000, start_size: 1852.945683100228}
+- name: NI
+  description: Introgressing Neanderthal lineage
+  start_time: 80000
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 45000, start_size: 1852.945683100228}
+- name: Nama
+  description: Branch leading to Nama
+  ancestors: [MH]
+  epochs:
+  - {end_time: 261, start_size: 10169.527638991853}
+  - {end_time: 0, start_size: 222.10262000684267}
+- name: Gumuz
+  description: E. African branch leading to Gumuz
+  ancestors: [MH]
+  epochs:
+  - {end_time: 5000, start_size: 7130.266882942069}
+  - {end_time: 0, start_size: 3805.202707037598}
+- name: MSL
+  description: W. African branch leading to Mende
+  start_time: 60000
+  ancestors: [Gumuz]
+  epochs:
+  - {end_time: 5000, start_size: 17278.006599182667}
+  - {end_time: 0, start_size: 16731.99242979288}
+- name: GBR
+  description: Eurasian branch leading to British
+  start_time: 50000
+  ancestors: [Gumuz]
+  epochs:
+  - {end_time: 0, start_size: 844.6478263583682, end_size: 12143.500268101368}
+- name: EP
+  description: Admixed E. African agriculturalist branch
+  start_time: 12000
+  ancestors: [Gumuz, GBR]
+  proportions: [0.3396857956307699, 0.66031420436923]
+  epochs:
+  - {end_time: 0, start_size: 12993.658742839812}
+migrations:
+- demes: [Nama, MSL]
+  rate: 2.8280711342542274e-05
+- demes: [Nama, Gumuz]
+  rate: 4.97814982661716e-05
+- demes: [Nama, EP]
+  rate: 4.97814982661716e-05
+- demes: [MSL, Gumuz]
+  rate: 0.00018735864603466767
+- demes: [MSL, EP]
+  rate: 0.00018735864603466767
+- demes: [Gumuz, GBR]
+  rate: 4.376445688197196e-05
+- demes: [GBR, EP]
+  rate: 4.376445688197196e-05
+- demes: [Gumuz, EP]
+  rate: 0.00041755226649861995
+pulses:
+- sources: [NI]
+  dest: GBR
+  time: 45000
+  proportions: [0.015]
+- sources: [EP]
+  dest: Nama
+  time: 2000
+  proportions: [0.2803923941917683]
+- sources: [GBR]
+  dest: Nama
+  time: 290
+  proportions: [0.149928302580018]

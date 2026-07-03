@@ -1,0 +1,18 @@
+scensimulate:
+  ArchIE_3D19:
+    demes_file: config/demography/ArchIE_3D19.yaml
+    sim_outputdir: sim/ArchIE_3D19/
+    ref_id: Reference
+    tgt_id: Target
+    src_id: Source
+    nref: 50
+    ntgt: 10
+  ArchIE_3D19_WOI:
+    demes_file: config/demography/ArchIE_3D19_WOI.yaml
+    sim_outputdir: sim/ArchIE_3D19_WOI/
+    ref_id: Ref
+    tgt_id: Tgt
+    src_id: Ghost
+    nref: 50
+    ntgt: 10
+nrep: 10

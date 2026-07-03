@@ -1,0 +1,127 @@
+# Pongo model
+description:
+  A orang utan model with demographic parameters taken from
+  Nater et al. (2017) Morphometric, Behavioral, and Genomic Evidence for a New Orangutan Species.
+  Mutation rate 1.5 * 10*-8 ('based on estimates obtained for the present-day mutation rates in humans and chimpanzees')
+  Recombination rate see paper page e4
+  ABC mode values are used (table S5/1)
+
+
+time_units: years
+generation_time: 25
+
+doi:
+- https://doi.org/10.17632/hv2r94yz5n.1
+
+
+demes:
+- name: anc
+  description: Ancestral population
+  epochs:
+  # timing of ne change TSPLITBO (split time ST-BO) mean: 681760, 95HPD: lower: 427878, upper: 921400
+  # NANCST: AncNe (anc ne) mean: 28907 ; 95HPD: start_size: 7522-99855
+  - {end_time: 674055, start_size: 35874} 
+  # NT splits from anc
+- name: NT
+  start_time: 3382200 #TSPLITNT: NT split time, mean: 2827150, 95HPD: 1712005-3977250
+  description: North of Toba ancestral population
+  ancestors: [anc]
+  epochs:
+  - {end_time: 1057388, start_size: 53811} # TSTRUCNT, mean: end_time: 873195, start_size: 29654; Ne: mean 29654 95hpd 5115 - 99,885
+
+- name: NT1
+  description: North of Toba population 1
+  ancestors: [NT]
+  epochs:
+  - {end_time: 82635, start_size: 19925} # TDECNT, NSTRUCNT (2),  mean: end_time: 54372, start_size: 26795 ; 95HPD: end_time: 10126-99975, start_size: 3736-197419
+  - {end_time: 0, start_size: 2854} # NNOWNT, mean: start_size: 3212 ; 95HPD: 517-21691
+
+- name: NT2
+  description: North of Toba population 2
+  ancestors: [NT]
+  epochs:
+  - {end_time: 82635, start_size: 19925} # TDECNT, NSTRUCNT (2) , mean: end_time: 54372, start_size: 26795 ; 95HPD: end_time: 10126-99975, start_size: 3736-197419
+  - {end_time: 0, start_size: 2854} # NNOWNT, mean: start_size: 3212 ; 95HPD: 517-21691
+
+- name: ST
+  description: South of Toba
+  ancestors: [anc]
+  epochs:
+  - {end_time: 82635, start_size: 35874} #mean: end_time: 54372, start_size: 28907 ; 95HPD: end_time: 10126-99975, start_size: 7522-99855
+  - {end_time: 0, start_size: 2520} # NNOWST, mean: start_size:  2429 ; 95HPD: 524-10756
+
+- name: BO
+  description: Borneo ancestral population
+  ancestors: [anc]
+  epochs:
+  # end_time, specifying the time of the start of the bottleneck, is only implicitly given by table S5: adding of TBNDUR (duration of bottleneck) and TBNEND (time since end of bottleneck)
+  # 105552 is the addition of the nodes (in the tree, 106k is stated) - see excel sheet
+  - {end_time: 105552, start_size: 30655} #NANCBO, mean: start_size: 36257 ; 95HPD: start_size: 5924-266244
+  - {end_time: 71969, start_size: 4473} #NBNBO, mean: end_time: 125689, start_size: 3719 ; 95HPD: end_time: 8848-272775, start_size: 523-27948
+
+- name: BO1
+  description: Borneo population 1
+  ancestors: [BO]
+  epochs:
+  - {end_time: 0, start_size: 1487} #NNOWBO (4), mean: 1759 ; 95HPD: 207-8002
+
+- name: BO2
+  description: Borneo population 2
+  ancestors: [BO]
+  epochs:
+  - {end_time: 0, start_size: 1487} #mean: 1759 ; 95HPD: 207-8002
+
+- name: BO3
+  description: Borneo population 3
+  ancestors: [BO]
+  epochs:
+  - {end_time: 0, start_size: 1487} #mean: 1759 ; 95HPD: 207-8002
+
+- name: BO4
+  description: Borneo population 4
+  ancestors: [BO]
+  epochs:
+  - {end_time: 0, start_size: 1487} #mean: 1759 ; 95HPD: 207-8002
+
+
+# NmWBO: 6.818 # NmWBO: metapop migration
+# NmWNT: 0,128 # NmWNT metapop migration
+
+# NmBOST: 0.016  # NmBOST: migrants in BO from ST, Mij = 4N0mij
+# NmSTBO: 0.003 # NmSTBO: migrants in ST from BO
+# NmNTST: 0.294 # NmNTST: migrants in NT from ST
+# NmSTNT: 0.86 # NmSTNT: migrants in ST from NT
+
+
+# migration stop between BO and ST: 303118
+# migstop: mode: 303118, mean: 253968, 95HPD: lower: 82680, upper: 399903
+
+migrations:
+    # mean: start_time: 681760, 95HPD: lower: 427878, upper: 921400
+    # migstop/end_time: mode: 303118, mean: 253968, 95HPD: lower: 82680, upper: 399903
+
+    - {source: ST, dest: BO, start_time: 674055, end_time: 303118, rate: 0.000004} 
+    - {source: BO, dest: ST, start_time: 674055, end_time: 303118, rate: 0.00000075}
+
+    # assumption: end of migration at start of population decline in North Toba?
+    # assumption: start of migration at start of Bornean split?
+    # start_time: #mean: 681760, 95HPD: 427878-921400
+    #mean: end_time: 54372, start_size: 28907 ; 95HDF: end_time: 10126-99975, start_size: 7522-99855
+
+    # there is no division by subpopulations (2), because 'ST exchanges migrants at the specified rates with each of the two NT subpopulations'
+    # it is also assumed that the 'full' migration into NT is for both ST subpopulations i.e. (mNTST with mode 0.294 also appears twice in the model,
+    # mNT1ST and mNT2ST)
+    - {source: ST, dest: NT1, start_time: 674055, end_time: 82635, rate: 0.0000735}
+    - {source: NT1, dest: ST, start_time: 674055, end_time: 82635, rate: 0.000215}
+    - {source: ST, dest: NT2, start_time: 674055, end_time: 82635, rate: 0.0000735}
+    - {source: NT2, dest: ST, start_time: 674055, end_time: 82635, rate: 0.000215}
+
+
+    # also for NT within migration we assume that it stops at population decline
+    - demes: [NT1, NT2]
+      end_time: 82635
+      rate: 0.000032
+    - demes: [BO1, BO2, BO3, BO4]
+      rate: 0.0017045
+
+
