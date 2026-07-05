@@ -3,9 +3,9 @@
 scenarios: ["humnea_50_10"]
 
 
-results_folder: "results_humnea_50_10b"
+results_folder: "results_humnea_50_10_10MB_12rep_15000T"
 #test_data_folder: "test_data_including_maps"
-test_data_folder: "test_data_humnea_50_10b"
+test_data_folder: "test_data_humnea_50_10_10MB_12rep"
 
 #scenario_subfolder: "including_maps"
 

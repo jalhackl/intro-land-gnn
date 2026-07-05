@@ -3,25 +3,23 @@ include: "rules/common.smk"
 include: "rules/simulate_rep.smk"
 include: "rules/install_external_tools.smk"
 include: "rules/process_vcf.smk"
-include: "rules/SPrime/run_Sprime.smk"
+#include: "rules/SPrime/run_Sprime.smk"
 
-include: "rules/hmmix/run_hmmix_classic.smk"
-include: "rules/hmmix/run_hmmix_artemis.smk"
+#include: "rules/hmmix/run_hmmix_classic.smk"
+#include: "rules/hmmix/run_hmmix_artemis.smk"
 
-include: "rules/sstar/run_sstar.smk"
-
+#include: "rules/sstar/run_sstar.smk"
 
 include: "rules/plot.smk"
 
 include: "rules/trace/run_trace.smk"
 
-
-
-#ruleorder: simulate_gaishisim > get_biallelic_vcf
-
 import os
+
 scenarios = main_config["scenarios"]  # e.g., ["config_ArchIE_4D19_1", ...]
 results_folder = main_config["results_folder"]
+
+tree_types = [".relate.trees", ".ts", "_tsinfer.ts"]
 
 # Build a list of files to plot based on the models in the config
 base_path = main_config["results_folder"]
@@ -31,74 +29,59 @@ plot_inputs = [
     for model in main_config["models_for_plotting"]
 ]
 
-#individual results folders
-hmmix_results_dir = os.path.join(results_folder, "hmmix")
-hmmix_artemis_results_dir = os.path.join(results_folder, "hmmix_artemis")
+# individual results folders
+#hmmix_results_dir = os.path.join(results_folder, "hmmix")
+#hmmix_artemis_results_dir = os.path.join(results_folder, "hmmix_artemis")
 
-
-def get_all_simulation_files():
-    files = []
-    for scenario in scenarios:
-        nrep = scenario_configs[scenario]["nrep"]
-        prefix = scenario_configs[scenario]["output_prefix"]
-
-        for rep in range(nrep):
-            base = os.path.join(
-                main_config["test_data_folder"],
-                scenario,
-                str(rep),
-                prefix
-            )
-
-            files.extend([
-                f"{base}.ts",
-                f"{base}.vcf",
-                f"{base}.ref.ind.list",
-                f"{base}.tgt.ind.list",
-                f"{base}.tracehmm.extract"
-            ])
-    return files
-
-
-def get_simulation_outputs():
-    files = []
-    for scenario in scenarios:
-        nrep = scenario_configs[scenario]["nrep"]
-        prefix = scenario_configs[scenario]["output_prefix"]
-
-        files += [
-            os.path.join(
-                main_config["test_data_folder"],
-                scenario,
-                str(rep),
-                f"{prefix}.{suffix}"
-            )
-            for rep in range(nrep)
-            for suffix in ["ts", "vcf", "ref.ind.list", "tgt.ind.list"]
-        ]
-    return files
 
 
 rule all:
     input:
-        lambda wc: [
+        expand(
             os.path.join(
                 main_config["test_data_folder"],
-                scenario,
-                str(rep),
-                f"{scenario_configs[scenario]['output_prefix']}.{rep}.ts"
-            )
-            for scenario in scenario_configs
-            for rep in range(scenario_configs[scenario]["nrep"])
-        ],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}.ts"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[scenario_configs[s]["output_prefix"] for s in scenario_configs]
+        ),
 
-        lambda wc: [
+
+   
+
+        expand(
             os.path.join(
-                main_config["test_data_folder"],
-                scenario,
-                str(rep),
-                f"{scenario_configs[scenario]['output_prefix']}.{rep}.tracehmm.extract.summary.full.summary.txt"
-            )
-            for scenario in scenario_configs
-            for rep in range(scenario_configs[scenario]["nrep"])
-        ]
+                results_folder,
+                "tracehmm",
+                "{scenario}",
+                "{tree_type}",
+                "{prefix}.rep_{rep}",
+                "threshold_{threshold}",
+                "metrics_ind.txt"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            threshold=trace_config["thresholds"],
+            prefix=[scenario_configs[s]["output_prefix"] for s in scenario_configs],
+            tree_type=tree_types
+        ),
+
+        os.path.join(
+            results_folder,
+            "tracehmm",
+            "tracehmm_metrics_summary.csv"
+        ),
+
+        f"{results_folder}/plots/tracehmm_precision_recall_curve.pdf",
+        f"{results_folder}/plots/tracehmm_confusion_matrix.pdf"

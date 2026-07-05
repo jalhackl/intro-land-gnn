@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import numpy as np
 import tsinfer
+import tsdate
 import tskit
 
 
@@ -16,8 +17,11 @@ class InferTskit:
         remove_zarr=True,
         ancestral_mode="from_ts",   
         ts_file=None,
-        check_ancestral_state=False,
-        num_sites=None
+        check_ancestral_state=True,
+        num_sites=None,
+        apply_tsdate=True,
+        tsdate_time_unit="generations",
+        tsdate_mutation_rate=1e-8
     ):
         self.vcf_file = vcf_file
         self.ts_file = ts_file
@@ -37,6 +41,10 @@ class InferTskit:
         )
 
         self.zarr_file = os.path.splitext(self.vcf_file)[0] + ".zarr"
+
+        self.apply_tsdate = apply_tsdate
+        self.tsdate_time_unit = tsdate_time_unit
+        self.tsdate_mutation_rate = tsdate_mutation_rate
 
     # ==========================================================
     # MAIN
@@ -75,6 +83,14 @@ class InferTskit:
         inferred_ts = tsinfer.infer(vdata)
         print("infer finished")
 
+        if self.apply_tsdate:
+            inferred_ts = tsdate.preprocess_ts(
+                inferred_ts,
+                erase_flanks=False,
+                split_disjoint = False
+            )
+            inferred_ts = tsdate.date(inferred_ts, mutation_rate=self.tsdate_mutation_rate, time_units=self.tsdate_time_unit)
+
         inferred_ts.dump(self.ts_inferred)
         print("inferred tree dumped:", self.ts_inferred)
 
@@ -100,20 +116,13 @@ class InferTskit:
             ts_true = tskit.load(self.ts_file)
 
 
-            ancestral_states = np.zeros(ts_true.num_sites, dtype=np.int8)
+            ancestral_states = np.zeros(ts_true.num_sites, dtype=object)
 
             if self.check_ancestral_state:
                 for i, site in enumerate(ts_true.sites()):
-                    try:
-                        ancestral_states[i] = int(site.ancestral_state)
-                    except Exception:
-                        raise ValueError(
-                            f"Non-numeric ancestral state at site {i}: "
-                            f"{site.ancestral_state}"
-                        )
+                    
+                    ancestral_states[i] = site.ancestral_state
 
-            else:
-                ancestral_states = np.zeros(ts_true.num_sites, dtype=np.int8)
 
             return tsinfer.VariantData(self.zarr_file, ancestral_states)
 
@@ -123,9 +132,9 @@ class InferTskit:
         if not self.num_sites:
 
             ts_true = tskit.load(self.ts_file)
-            ancestral_states = np.zeros(ts_true.num_sites, dtype=np.int8)
+            ancestral_states = np.zeros(ts_true.num_sites, dtype=object)
         else:
-            ancestral_states = np.zeros(self.num_sites, dtype=np.int8)
+            ancestral_states = np.zeros(self.num_sites, dtype=object)
 
 
         vdata = tsinfer.VariantData(self.zarr_file, np.array(ancestral_states))
@@ -136,23 +145,23 @@ class InferTskit:
         # --------------------------
         # zeros
         if self.ancestral_mode == "zeros":
-            ancestral_states = np.zeros(vdata.num_sites, dtype=np.int8)
+            ancestral_states = np.zeros(vdata.num_sites, dtype=object)
             return tsinfer.VariantData(self.zarr_file, ancestral_states)
 
         # --------------------------
-        # random
+        # random - only for binary
         # --------------------------
         elif self.ancestral_mode == "random":
             ancestral_states = np.random.randint(
                 0, 2, size=vdata.num_sites
-            ).astype(np.int8)
+            ).astype(object)
             return tsinfer.VariantData(self.zarr_file, ancestral_states)
 
         # --------------------------
         # major allele
         # --------------------------
         elif self.ancestral_mode == "major":
-            ancestral_states = np.zeros(vdata.num_sites, dtype=np.int8)
+            ancestral_states = np.zeros(vdata.num_sites, dtype=object)
 
             for i, variant in enumerate(vdata.variants()):
                 counts = np.bincount(variant.genotypes)

@@ -787,6 +787,9 @@ def cal_metrics_multiple(true_tract_files,
     import pybedtools
     import os
 
+    print("TRUE FILES:", true_tract_files)
+    print("INFERRED FILES:", inferred_tract_files)
+
     if not column_names:
         column_names = ["chrom", "start", "end", "sample"]
 
@@ -808,7 +811,8 @@ def cal_metrics_multiple(true_tract_files,
             total_bases = sequence_length
 
     for true_f, inf_f in zip(true_tract_files, inferred_tract_files):
-
+        print("CurrTRUE FILES:", true_f)
+        print("CurrINFERRED FILES:", inf_f)
         # --- Load safely ---
         if not os.path.exists(true_f) or os.path.getsize(true_f) == 0:
             truth_df = pd.DataFrame(columns=column_names)
@@ -957,3 +961,126 @@ def cal_metrics_multiple(true_tract_files,
             total_false_positive,
             total_false_negative,
             total_true_negative)
+
+
+
+
+def cal_metrics_single(
+    true_tract_file,
+    inferred_tract_file,
+    sequence_length=None,
+    column_names=None,
+    return_tn=False,
+    return_precision_recall=False
+):
+    import pandas as pd
+    import numpy as np
+    import pybedtools
+    import os
+
+    if column_names is None:
+        column_names = ["chrom", "start", "end", "sample"]
+
+    chrom, start, end, sample = column_names
+
+    # --- Load files safely ---
+    def load(path):
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            return pd.DataFrame(columns=column_names)
+        return pd.read_csv(path, sep="\t", header=None, names=column_names)
+
+    truth_df = load(true_tract_file)
+    inferred_df = load(inferred_tract_file)
+
+    # --- get samples ---
+    samples = set(truth_df[sample]).union(set(inferred_df[sample]))
+
+    total_tp = total_fp = total_fn = 0
+    total_true = total_inf = 0
+
+    total_bases = sequence_length if sequence_length is not None else 0
+
+    for s in samples:
+        truth_s = truth_df[truth_df[sample] == s][[chrom, start, end]]
+        inf_s = inferred_df[inferred_df[sample] == s][[chrom, start, end]]
+
+        truth_bt = None
+        inf_bt = None
+
+        # --- build BedTools ---
+        if not truth_s.empty:
+            truth_bt = pybedtools.BedTool.from_dataframe(truth_s).sort().merge()
+            t_true = sum(i.stop - i.start for i in truth_bt)
+        else:
+            t_true = 0
+
+        if not inf_s.empty:
+            inf_bt = pybedtools.BedTool.from_dataframe(inf_s).sort().merge()
+            t_inf = sum(i.stop - i.start for i in inf_bt)
+        else:
+            t_inf = 0
+
+        # --- clip if needed ---
+        if sequence_length is not None:
+            chroms = set()
+
+            if truth_bt:
+                chroms.update(i.chrom for i in truth_bt)
+            if inf_bt:
+                chroms.update(i.chrom for i in inf_bt)
+
+            if chroms:
+                clip = pybedtools.BedTool(
+                    "\n".join(f"{c}\t0\t{sequence_length}" for c in chroms),
+                    from_string=True
+                )
+
+                if truth_bt:
+                    truth_bt = truth_bt.intersect(clip).sort().merge()
+                    t_true = sum(i.stop - i.start for i in truth_bt)
+
+                if inf_bt:
+                    inf_bt = inf_bt.intersect(clip).sort().merge()
+                    t_inf = sum(i.stop - i.start for i in inf_bt)
+
+        # --- TP ---
+        if truth_bt and inf_bt:
+            tp = sum(i.stop - i.start for i in inf_bt.intersect(truth_bt).sort().merge())
+        else:
+            tp = 0
+
+        # --- FP ---
+        if inf_bt and truth_bt:
+            fp = sum(i.stop - i.start for i in inf_bt.subtract(truth_bt).sort().merge())
+        else:
+            fp = t_inf
+
+        # --- FN ---
+        if truth_bt and inf_bt:
+            fn = sum(i.stop - i.start for i in truth_bt.subtract(inf_bt).sort().merge())
+        else:
+            fn = t_true
+
+        total_tp += tp
+        total_fp += fp
+        total_fn += fn
+        total_true += t_true
+        total_inf += t_inf
+
+        if sequence_length is not None:
+            total_bases += sequence_length
+
+    result = [total_tp, total_fp, total_fn]
+
+    # --- optional TN ---
+    if return_tn and sequence_length is not None:
+        tn = total_bases - (total_tp + total_fp + total_fn)
+        result.append(tn)
+
+    # --- optional precision/recall ---
+    if return_precision_recall:
+        precision = (total_tp / total_inf * 100) if total_inf else np.nan
+        recall = (total_tp / total_true * 100) if total_true else np.nan
+        result.extend([precision, recall])
+
+    return tuple(result)

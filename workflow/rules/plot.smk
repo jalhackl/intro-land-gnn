@@ -1,7 +1,10 @@
 sys.path.append("workflow/scripts")
 from evaluate_utils import cal_accuracy, cal_accuracy_multiple
-from plotting import plot_prc, plot_confusion_matrices
-
+from plotting import plot_prc, plot_confusion_matrices, plot_prc_summary
+from plotting import (
+    plot_prc_summary,
+    plot_confusion_summary
+)
 
 data_folder = main_config["test_data_folder"]
 scenario_list = list(scenario_configs.keys())
@@ -55,3 +58,33 @@ rule plot_all:
         f"{base_path}/plots/{{model}}_confusion_matrix.pdf",
         model=main_config["models_for_plotting"]
     )
+
+
+
+
+
+rule plot_tracehmm_prc:
+    input:
+        f"{base_path}/tracehmm/tracehmm_metrics_summary.csv"
+
+    output:
+        f"{base_path}/plots/tracehmm_precision_recall_curve.pdf"
+
+    run:
+        plot_prc_summary(
+            input[0],
+            output[0]
+        )
+
+rule plot_tracehmm_confusion:
+    input:
+        f"{base_path}/tracehmm/tracehmm_metrics_summary.csv"
+
+    output:
+        f"{base_path}/plots/tracehmm_confusion_matrix.pdf"
+
+    run:
+        plot_confusion_summary(
+            input[0],
+            output[0]
+        )

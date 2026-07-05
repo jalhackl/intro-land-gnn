@@ -152,3 +152,162 @@ def plot_confusion_matrices(
 
                 pdf.savefig()
                 plt.close()
+
+
+
+def plot_prc_summary_per_scenario(summary_file, output_file, plot_configs, sep="\t"):
+
+    df = pd.read_csv(summary_file, sep=sep)
+
+    plt.figure(figsize=(5,4))
+
+    for scenario, sub in df.groupby("scenario"):
+        sub = sub.sort_values("threshold")
+
+        plt.plot(
+            sub["recall"],
+            sub["precision"],
+            marker="o",
+            label=scenario,
+        )
+
+    # reuse your F1 iso-curves here
+
+    plt.xlabel("Recall (%)")
+    plt.ylabel("Precision (%)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_file)
+
+
+#including tree types
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def plot_prc_summary(summary_file, output_pdf):
+    """
+    Plot one precision-recall curve per scenario.
+
+    Within each scenario, each tree type gets its own curve.
+    """
+
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    df = pd.read_csv(summary_file, sep="\t")
+    df["tree_type"] = df["tree_type"].str.lstrip("_")
+    with PdfPages(output_pdf) as pdf:
+
+        for scenario in sorted(df["scenario"].unique()):
+
+            plt.figure(figsize=(5,5))
+
+            sub = df[df["scenario"] == scenario]
+
+            # F1 isolines
+            recall_vals = np.linspace(1,100,200)
+
+            for f in [20,40,60,80]:
+
+                precision = f * recall_vals / (2*recall_vals - f)
+
+                precision[(precision < 0) | (precision > 100)] = np.nan
+
+                plt.plot(
+                    recall_vals,
+                    precision,
+                    linestyle=":",
+                    color="gray",
+                    alpha=0.5
+                )
+
+            for tree in sorted(sub["tree_type"].unique()):
+                
+
+                s = (
+                    sub[sub["tree_type"] == tree]
+                    .sort_values("threshold")
+                )
+
+                plt.plot(
+                    s["recall"],
+                    s["precision"],
+                    marker="o",
+                    label=tree
+                )
+
+            plt.xlabel("Recall (%)")
+            plt.ylabel("Precision (%)")
+            plt.title(scenario)
+            plt.legend(title="Tree type")
+
+            pdf.savefig()
+            plt.close()
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+def plot_confusion_summary(summary_file, output_pdf):
+    """
+    Plot confusion matrices using the best-F1 threshold
+    for each tree type.
+    """
+
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    df = pd.read_csv(summary_file, sep="\t")
+
+    with PdfPages(output_pdf) as pdf:
+
+        for scenario in sorted(df["scenario"].unique()):
+
+            scenario_df = df[df["scenario"] == scenario]
+
+            for tree in sorted(scenario_df["tree_type"].unique()):
+
+                best = (
+                    scenario_df[
+                        scenario_df["tree_type"] == tree
+                    ]
+                    .sort_values("F1", ascending=False)
+                    .iloc[0]
+                )
+
+                cm = [
+                    [best["TN"], best["FP"]],
+                    [best["FN"], best["TP"]]
+                ]
+
+                plt.figure(figsize=(5,4))
+
+                sns.heatmap(
+                    cm,
+                    annot=True,
+                    fmt=".0f",
+                    cmap="Blues",
+                    xticklabels=[
+                        "not introgressed",
+                        "introgressed"
+                    ],
+                    yticklabels=[
+                        "not introgressed",
+                        "introgressed"
+                    ],
+                )
+
+                plt.xlabel("Predicted")
+                plt.ylabel("True")
+
+                plt.title(
+                    f"{scenario}\n"
+                    f"{tree}\n"
+                    f"threshold={best['threshold']}   "
+                    f"F1={best['F1']:.1f}"
+                )
+
+                pdf.savefig()
+                plt.close()

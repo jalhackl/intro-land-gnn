@@ -71,7 +71,7 @@ class MsprimeSimulator(DataSimulator):
 
         create_relate_output: bool = True, relate_config  = None,
         create_tsinfer_output: bool = True, tsinfer_config = None,
-        tsinfer_check_ancestral_state: bool = False,
+        tsinfer_check_ancestral_state: bool = True,
 
 
     ):
@@ -662,7 +662,9 @@ class MsprimeSimulator(DataSimulator):
 
             ancestral_mode=self.tsinfer_config.get("ancestral_mode", "from_ts"),
             ts_file=ts_file,
-            check_ancestral_state=self.tsinfer_check_ancestral_state
+            check_ancestral_state=self.tsinfer_check_ancestral_state,
+
+            tsdate_mutation_rate = self.mut_rate
             )
         
 

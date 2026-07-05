@@ -25,7 +25,7 @@ def _run_pipeline(
     base_dir,
     prefix="trace",
     t=20000,
-    chrom="chr1",
+    chrom="1",
     posterior_threshold=0.9,
     physical_length_threshold=50000,
     genetic_distance_threshold=0.05
@@ -48,26 +48,25 @@ def _run_pipeline(
     summary_full_prefix = out_base + ".summary.full"
     summary_dir = out_base + ".summary.individual"
 
+    os.makedirs(out_base, exist_ok=True)
     os.makedirs(base_dir, exist_ok=True)
     os.makedirs(summary_dir, exist_ok=True)
 
-    
-
+    # ------------------------------------------------
     # 1. build indices
-
-    _, tgt_idx, tgt_id_map, tgt_name_to_index = build_trace_indices(ref_list, tgt_list, ploidy=2)
-
-    print("tgt_idx")
-    print(tgt_idx)
-    print("tgt_id_map")
-    print(tgt_id_map)
+    # ------------------------------------------------
+    _, tgt_idx, tgt_id_map, tgt_name_to_index = build_trace_indices(
+        ref_list, tgt_list, ploidy=2
+    )
 
     with open(idx_file, "w") as f:
         f.write(",".join(map(str, tgt_idx)))
 
     inds = [str(i) for i in tgt_idx]
 
+    # ------------------------------------------------
     # 2. trace-extract
+    # ------------------------------------------------
     run(
         f"trace-extract "
         f"-f {trees} "
@@ -76,14 +75,16 @@ def _run_pipeline(
         f"-o {out_base}"
     )
 
-    # 3. trace-infer (per individual)
+    # ------------------------------------------------
+    # 3. trace-infer
+    # ------------------------------------------------
     infer_outputs = []
 
     for ind in inds:
 
-
         infer_prefix = os.path.join(
-            base_dir,
+            #base_dir,
+            out_base,
             f"infer.{prefix}.ind{ind}.xss.npz"
         )
 
@@ -91,10 +92,10 @@ def _run_pipeline(
             f"trace-infer "
             f"-i {ind} "
             f"--npz-files {npz_file} "
+            f"--chroms {chrom} "
             f"-o {infer_prefix}"
         )
 
-        # REAL filename written by TRACE
         infer_file = f"{infer_prefix}.{chrom}.xss.npz"
 
         if not os.path.exists(infer_file):
@@ -104,44 +105,64 @@ def _run_pipeline(
 
         infer_outputs.append(infer_file)
 
-    # 4. trace-summarize (FULL)
-    # full_list only for multi chromosme (and one individual)
-    '''
-    full_list = ",".join(infer_outputs)
-    chroms = ",".join([chrom] * len(infer_outputs))
+    # ============================================================
+    # 4 + 5. trace-summarize + merge
+    # ============================================================
 
-    run(
-        f"trace-summarize "
-        f"-f {full_list} "
-        f"-c {chroms} "
-        f"--posterior-threshold {posterior_threshold} "
-        f"--physical-length-threshold {physical_length_threshold} "
-        f"--genetic-distance-threshold {genetic_distance_threshold} "
-        f"-o {summary_full_prefix}"
-    )
-    '''
+    # Osingle value
+    if isinstance(posterior_threshold, (int, float)):
 
-    # 5. trace-summarize 
-    for ind, inf_file in zip(inds, infer_outputs):
+        for ind, inf_file in zip(inds, infer_outputs):
 
-        run(
-            f"trace-summarize "
-            f"-f {inf_file} "
-            f"-c {chrom} "
-            f"--posterior-threshold {posterior_threshold} "
-            f"--physical-length-threshold {physical_length_threshold} "
-            f"--genetic-distance-threshold {genetic_distance_threshold} "
-            f"-o {os.path.join(summary_dir, f'ind{ind}.summary')}"
+            run(
+                f"trace-summarize "
+                f"-f {inf_file} "
+                f"-c {chrom} "
+                f"--posterior-threshold {posterior_threshold} "
+                f"--physical-length-threshold {physical_length_threshold} "
+                f"--genetic-distance-threshold {genetic_distance_threshold} "
+                f"-o {os.path.join(summary_dir, f'ind{ind}.summary')}"
+            )
+
+        merge_summaries(
+            summary_dir=summary_dir,
+            output_file=out_base + ".ALL_merged_summary.txt",
+            id_to_name=tgt_id_map
         )
 
+    # list of thresholds
 
-    merge_summaries(
-        summary_dir=summary_dir,
-        output_file=out_base + ".ALL_merged_summary.txt",
-        id_to_name=tgt_id_map
-    )
+    else:
 
-    #for snakemake
+        for p_thr in posterior_threshold:
+
+            p_thr_tag = f"threshold{p_thr}"
+
+            # summarize per individual
+            for ind, inf_file in zip(inds, infer_outputs):
+
+                run(
+                    f"trace-summarize "
+                    f"-f {inf_file} "
+                    f"-c {chrom} "
+                    f"--posterior-threshold {p_thr} "
+                    f"--physical-length-threshold {physical_length_threshold} "
+                    f"--genetic-distance-threshold {genetic_distance_threshold} "
+                    f"-o {os.path.join(summary_dir, f'ind{ind}.summary.{p_thr_tag}')}"
+                )
+
+            # merge per threshold
+            merge_summaries(
+                summary_dir=summary_dir,
+                output_file=out_base + f".{p_thr_tag}.ALL_merged_summary.txt",
+                id_to_name=tgt_id_map,
+                file_middle_part= f"{p_thr_tag}.summary.txt",
+                #file_suffix=p_thr_tag,
+                export_bed=True,
+                bed_output_file=out_base + f".{p_thr_tag}.inferred.tracts.bed"
+            )
+
+
     done_file = out_base + ".done"
     with open(done_file, "w") as f:
         f.write("OK\n")
@@ -158,36 +179,72 @@ def main(
     curr_folder,
     t=20000,
     log_file=None,
-    chrom="chr1",
+    chrom="1",
     posterior_threshold=0.9,
     physical_length_threshold=50000,
     genetic_distance_threshold=0.05
 ):
-    """
-    function to be called in snakemake workflow
-    """
 
     base_dir = os.path.join(curr_folder, scenario, rep)
 
     idx_file = os.path.join(
-        base_dir,
+        #base_dir,
+        out_base,
         f"{prefix}.{rep}.tracehmm.idx"
     )
 
-    _run_pipeline(
-        trees=trees,
-        ref_list=ref_list,
-        tgt_list=tgt_list,
-        idx_file=idx_file,
-        out_base=out_base,
-        base_dir=base_dir,
-        prefix=prefix, 
-        t=t,
-        chrom=chrom,
-        posterior_threshold= posterior_threshold,
-        physical_length_threshold = physical_length_threshold,
-        genetic_distance_threshold = genetic_distance_threshold
+    try:
+        _run_pipeline(
+            trees=trees,
+            ref_list=ref_list,
+            tgt_list=tgt_list,
+            idx_file=idx_file,
+            out_base=out_base,
+            base_dir=base_dir,
+            prefix=prefix,
+            t=t,
+            chrom=chrom,
+            posterior_threshold=posterior_threshold,
+            physical_length_threshold=physical_length_threshold,
+            genetic_distance_threshold=genetic_distance_threshold,
+        )
+
+    except Exception as e:
+        print(f"TRACE pipeline failed: {e}")
+
+        write_empty_outputs(out_base, posterior_threshold)
+
+        # optionally write a .failed marker
+        with open(out_base + ".failed", "w") as f:
+            f.write(str(e) + "\n")
+
+
+def write_empty_outputs(out_base, posterior_threshold):
+
+    thresholds = (
+        [posterior_threshold]
+        if isinstance(posterior_threshold, (int, float))
+        else posterior_threshold
     )
+
+    for thr in thresholds:
+
+        if isinstance(posterior_threshold, (int, float)):
+            bed = out_base + ".inferred.tracts.bed"
+            summary = out_base + ".ALL_merged_summary.txt"
+        else:
+            tag = f"threshold{thr}"
+            bed = out_base + f".{tag}.inferred.tracts.bed"
+            summary = out_base + f".{tag}.ALL_merged_summary.txt"
+
+        # empty BED with header
+        with open(bed, "w") as f:
+            #f.write("chrom\tstart\tend\tindividual\n")
+            f.write("")
+
+        # empty summary
+        with open(summary, "w") as f:
+            f.write("")
 
 
 def run_simple(
@@ -196,7 +253,7 @@ def run_simple(
     tgt_list,
     out_folder,
     t=20000,
-    chrom="chr1",
+    chrom="1",
     posterior_threshold=0.9,
     physical_length_threshold=50000,
     genetic_distance_threshold=0.05
@@ -243,18 +300,25 @@ def run_simple(
     )
 
 
-def merge_summaries(summary_dir, output_file, file_middle_part="summary.summary.txt", id_to_name=None):
-    """
-    Merge all per-individual TRACE summaries into one file.
 
-    If id_to_name is provided:
-        adds column "individual" with mapped names (list as created by the initial workflow)
+def merge_summaries(
+    summary_dir,
+    output_file,
+    file_middle_part="summary.txt",
+    file_suffix="",
+    id_to_name=None,
+    export_bed=True,
+    bed_output_file=None
+):
 
-    Otherwise:
-        only adds numeric "individual_id"
-    """
+    # ------------------------------------------------
+    # select files (old vs new naming)
+    # ------------------------------------------------
+    if file_suffix:
+        pattern = os.path.join(summary_dir, f"ind*.{file_middle_part}.{file_suffix}")
+    else:
+        pattern = os.path.join(summary_dir, f"ind*.{file_middle_part}")
 
-    pattern = os.path.join(summary_dir, "ind*." + file_middle_part)
     files = sorted(glob.glob(pattern))
 
     if len(files) == 0:
@@ -273,18 +337,30 @@ def merge_summaries(summary_dir, output_file, file_middle_part="summary.summary.
 
         df = pd.read_csv(path, sep="\t")
 
-        # always keep numeric id
         df["individual_id"] = individual_id
 
-        # optional mapping
         if id_to_name is not None:
-
             df["individual"] = id_to_name[str(individual_id)]
 
         all_dfs.append(df)
 
     merged = pd.concat(all_dfs, ignore_index=True)
     merged.to_csv(output_file, sep="\t", index=False)
+
+    # ------------------------------------------------
+    # BED export
+    # ------------------------------------------------
+    if export_bed:
+        if bed_output_file is None:
+            bed_output_file = output_file.replace(
+                "ALL_merged_summary.txt",
+                "inferred.tracts.bed"
+            )
+
+        bed_df = merged[["chromosome", "start", "end", "individual"]].copy()
+        bed_df.columns = ["chrom", "start", "end", "individual"]
+
+        bed_df.to_csv(bed_output_file, sep="\t", index=False, header=False)
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
