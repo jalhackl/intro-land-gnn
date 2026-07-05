@@ -4,5 +4,4 @@
 examples*
 logs
 logs_slurm
-results*
 *__pycache__*

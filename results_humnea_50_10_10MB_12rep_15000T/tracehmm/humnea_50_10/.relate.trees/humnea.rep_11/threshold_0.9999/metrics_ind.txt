@@ -1,0 +1,2 @@
+scenario	tree_type	rep	threshold	TP	FP	FN	TN	precision	recall
+humnea_50_10	.relate.trees	11	0.9999	0	0	929119	169070881	0	0.0

@@ -1,0 +1,2 @@
+scenario	tree_type	rep	threshold	TP	FP	FN	TN	precision	recall
+humnea_50_10	_tsinfer.ts	6	0.95	0	0	6686555	203313445	0	0.0
