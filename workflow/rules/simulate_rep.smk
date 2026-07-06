@@ -40,6 +40,12 @@ rule simulate_gaishisim:
             "{rep}",
             "{prefix}.{rep}.relate.trees"
         ),
+        true=os.path.join(
+            main_config["test_data_folder"],
+            "{scenario}",
+            "{rep}",
+            "{prefix}.{rep}.true.tracts.bed"
+        )
 
     params:
         demes_file=lambda wc: scenario_configs[wc.scenario]["demes_file"],
@@ -53,7 +59,7 @@ rule simulate_gaishisim:
         prefix=lambda wc: scenario_configs[wc.scenario]["output_prefix"],
 
         phased_flag=lambda wc: "--phased"
-            if scenario_configs[wc.scenario].get("phased", False) else "",
+            if scenario_configs[wc.scenario].get("phased", True) else "",
 
         mutation_model=lambda wc: (
             f"--mutation_model {scenario_configs[wc.scenario]['mutation_model']}"

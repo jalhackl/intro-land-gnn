@@ -19,6 +19,10 @@ def load_configs():
         configs["sstar"] = yaml.safe_load(f)
 
 
+    with open("config/trace/config_trace.yaml", "r") as f:
+        configs["trace"] = yaml.safe_load(f)
+
+
     with open("config/slurm/config.yaml", "r") as f:
         configs["slurm"] = yaml.safe_load(f)
 
@@ -53,6 +57,9 @@ sprime_config = configs["sprime"]
 slurm_config = configs["slurm"]
 
 sstar_config = configs["sstar"]
+
+
+trace_config = configs["trace"]
 
 #scenario_configs = [configss[config] for config in configs if config.startswith("config_")]
 scenario_configs = load_scenario_configs(main_config)
