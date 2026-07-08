@@ -33,8 +33,8 @@ class InferTskit:
         zarr_samples_chunk_size=1000,
         worker_processes=4,
         use_pyfaidx=False,
-        poplabels_file="subset_individuals_relate_formatting.txt",
-        
+        #poplabels_file="subset_individuals_relate_formatting.txt",
+        poplabels_file=None,
         erase_flanks=True,
         split_disjoint=True,
         check_existing_zarr=True
