@@ -25,7 +25,7 @@ class InferRelate:
         vcf_file: str,
         output_prefix: str,
         recombination_rate: float,
-        mutation_rate: float,
+        mutation_rate: float =1.2e-8,
         sequence_length: int = None,
         relate_path: str = "resources/relate",
         genetic_map: Optional[str] = None,
@@ -35,7 +35,8 @@ class InferRelate:
         chromosome: str = "1",
         threads: int = 1,
         memory: int = 5,
-        try_to_estimate_Ne_from_demes=False
+        try_to_estimate_Ne_from_demes=False,
+        default_Ne: int = 30000
     ):
         self.vcf_file = Path(vcf_file)
         #self.output_prefix = Path(output_prefix)
@@ -72,27 +73,7 @@ class InferRelate:
             self.relate_path / "scripts" / "RelateParallel" / "RelateParallel.sh"
         ).resolve()
 
-        '''
-        # binaries
-        self.relate_bin = self.relate_path / "bin" / "Relate"
-        self.convert_bin = self.relate_path / "bin" / "RelateFileFormats"
-        self.parallel_script = (
-            self.relate_path / "scripts" / "RelateParallel" / "RelateParallel.sh"
-        )
-        
 
-        # files
-        self.haps_file = f"{self.output_prefix}.haps"
-        self.sample_file = f"{self.output_prefix}.sample"
-        self.map_file = (
-            self.genetic_map if self.genetic_map else f"{self.output_prefix}.map"
-        )
-
-        
-        self.output_prefix = Path(output_prefix).resolve()
-        self.output_dir = self.output_prefix.parent
-        self.relate_output_name = self.output_prefix.name
-        '''
         self.haps_file = (self.output_dir / f"{self.relate_output_name}.haps").resolve()
         self.sample_file = (self.output_dir / f"{self.relate_output_name}.sample").resolve()
         self.map_file = (self.output_dir / f"{self.relate_output_name}.map").resolve()
@@ -102,6 +83,8 @@ class InferRelate:
         self.popsize_file = f"{self.output_prefix}.PopSize.estimated_pop_size.txt"
 
         self.trees_file = f"{self.output_prefix}.trees"
+        
+        self.default_Ne = default_Ne
 
     # ==========================================================
     # MAIN PIPELINE
@@ -137,7 +120,7 @@ class InferRelate:
             return self._Ne_from_demes()
 
         #default value
-        return 30000
+        return self.default_Ne
         
     
 
