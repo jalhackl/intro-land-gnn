@@ -1,0 +1,44 @@
+chrom: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
+pref: aw_n81
+path_to_relate: /projects/psg/people/xcj768/resources/relate_v1.2.4_x86_64_dynamic
+mu: 4.96e-9
+haplotype_n: 144686
+rmaps_paths:
+  "1": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/1.average_canFam3.1.txt
+  "2": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/2.average_canFam3.1.txt
+  "3": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/3.average_canFam3.1.txt
+  "4": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/4.average_canFam3.1.txt
+  "5": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/5.average_canFam3.1.txt
+  "6": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/6.average_canFam3.1.txt
+  "7": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/7.average_canFam3.1.txt
+  "8": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/8.average_canFam3.1.txt
+  "9": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/9.average_canFam3.1.txt
+  "10": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/10.average_canFam3.1.txt
+  "11": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/11.average_canFam3.1.txt
+  "12": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/12.average_canFam3.1.txt
+  "13": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/13.average_canFam3.1.txt
+  "14": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/14.average_canFam3.1.txt
+  "15": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/15.average_canFam3.1.txt
+  "16": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/16.average_canFam3.1.txt
+  "17": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/17.average_canFam3.1.txt
+  "18": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/18.average_canFam3.1.txt
+  "19": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/19.average_canFam3.1.txt
+  "20": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/20.average_canFam3.1.txt
+  "21": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/21.average_canFam3.1.txt
+  "22": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/22.average_canFam3.1.txt
+  "23": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/23.average_canFam3.1.txt
+  "24": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/24.average_canFam3.1.txt
+  "25": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/25.average_canFam3.1.txt
+  "26": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/26.average_canFam3.1.txt
+  "27": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/27.average_canFam3.1.txt
+  "28": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/28.average_canFam3.1.txt
+  "29": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/29.average_canFam3.1.txt
+  "30": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/30.average_canFam3.1.txt
+  "31": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/31.average_canFam3.1.txt
+  "32": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/32.average_canFam3.1.txt
+  "33": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/33.average_canFam3.1.txt
+  "34": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/34.average_canFam3.1.txt
+  "35": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/35.average_canFam3.1.txt
+  "36": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/36.average_canFam3.1.txt
+  "37": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/37.average_canFam3.1.txt
+  "38": /projects/psg/people/qvw641/ResQ_wolf/HapNe/VCFs/38.average_canFam3.1.txt
