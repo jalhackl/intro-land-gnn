@@ -5,6 +5,7 @@
 import tskit
 import json
 import argparse
+import pandas as pd
 #---------------------------------------------------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="input params")
 parser.add_argument("--ts_file", type=str, help="input ts file after converting singer to tskit format")
