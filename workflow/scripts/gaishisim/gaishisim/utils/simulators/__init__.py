@@ -21,3 +21,7 @@
 from .DataSimulator import DataSimulator
 from .MsprimeSimulator import MsprimeSimulator
 from .InferRelate import InferRelate
+
+#from .InferTrees import InferTrees
+
+

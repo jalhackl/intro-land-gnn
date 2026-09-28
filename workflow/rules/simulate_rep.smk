@@ -26,27 +26,19 @@ rule simulate_gaishisim:
             "{rep}",
             "{prefix}.{rep}.tgt.ind.list"
         ),
-
-        ts_infer=os.path.join(
-            main_config["test_data_folder"],
-            "{scenario}",
-            "{rep}",
-            "{prefix}.{rep}_tsinfer.ts"
-        ),
-
-        ts_relate=os.path.join(
-            main_config["test_data_folder"],
-            "{scenario}",
-            "{rep}",
-            "{prefix}.{rep}.relate.trees"
-        ),
         true=os.path.join(
             main_config["test_data_folder"],
             "{scenario}",
             "{rep}",
             "{prefix}.{rep}.true.tracts.bed"
-        )
-
+        ),
+        #poplabels needed for singer (relate creates its own, with the sample order which is perhaps necessary)
+        poplabels=os.path.join(
+            main_config["test_data_folder"],
+            "{scenario}",
+            "{rep}",
+            "{prefix}.{rep}.poplabels"
+        ),
     params:
         demes_file=lambda wc: scenario_configs[wc.scenario]["demes_file"],
         nref=lambda wc: scenario_configs[wc.scenario]["nref"],

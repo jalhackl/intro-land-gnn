@@ -213,10 +213,11 @@ def main(
         print(f"TRACE pipeline failed: {e}")
 
         write_empty_outputs(out_base, posterior_threshold)
-
+        print(f"after TRACE pipeline failed, empty output written")
         # optionally write a .failed marker
-        with open(out_base + ".failed", "w") as f:
+        with open(out_base + ".done", "w") as f:
             f.write(str(e) + "\n")
+        print(f"after TRACE pipeline failed, final marker written!")
 
 
 def write_empty_outputs(out_base, posterior_threshold):
@@ -227,6 +228,7 @@ def write_empty_outputs(out_base, posterior_threshold):
         else posterior_threshold
     )
 
+    print("Start writing empty trace outputs!")
     for thr in thresholds:
 
         if isinstance(posterior_threshold, (int, float)):
@@ -245,6 +247,8 @@ def write_empty_outputs(out_base, posterior_threshold):
         # empty summary
         with open(summary, "w") as f:
             f.write("")
+    print("Finished writing empty trace outputs!")
+
 
 
 def run_simple(

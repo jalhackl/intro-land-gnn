@@ -25,10 +25,8 @@ class InferTskit:
         apply_tsdate=True,
         tsdate_time_unit="generations",
         tsdate_mutation_rate=1.2e-8,
+
         
-        #zarr_variants_chunk_size=None,
-        #zarr_samples_chunk_size=None,
-        #worker_processes=None,
         zarr_variants_chunk_size=100000,
         zarr_samples_chunk_size=1000,
         worker_processes=4,
@@ -37,7 +35,9 @@ class InferTskit:
         poplabels_file=None,
         erase_flanks=True,
         split_disjoint=True,
-        check_existing_zarr=True
+        check_existing_zarr=True,
+
+        set_ref_to_ancestral=False
     ):
         self.vcf_file = vcf_file
         self.ts_file = ts_file
@@ -80,6 +80,8 @@ class InferTskit:
         self.split_disjoint = split_disjoint
         self.check_existing_zarr = check_existing_zarr
 
+        self.set_ref_to_ancestral = set_ref_to_ancestral
+
     # ==========================================================
     # MAIN
     # ==========================================================
@@ -99,16 +101,7 @@ class InferTskit:
             # ------------------------------------------------------
             # Convert VCF to zarr
             # ------------------------------------------------------
-            '''
-            cmd = [
-                "vcf2zarr",
-                "convert",
-                "--force",
-                self.vcf_file,
-                self.zarr_file,
-            ]
-            '''
-            
+
             cmd = [
                 "vcf2zarr",
                 "convert",
@@ -252,18 +245,7 @@ class InferTskit:
 
                 ancestral_states = np.array(ancestral_states, dtype="U1")
                 
-                
-                '''
-                ancestral_states = np.zeros(
-                    self.num_sites,
-                    dtype=object
-                )
 
-                vdata = tsinfer.VariantData(self.zarr_file, ancestral_states)
-
-                for i, variant in enumerate(vdata.variants()):
-                    ancestral_states[i] = ancestral_sequence[variant.position - 1]
-                '''
                 return tsinfer.VariantData(
                     self.zarr_file,
                     ancestral_states
@@ -342,6 +324,7 @@ class InferTskit:
         if self.ancestral_mode == "none":
             return vdata
 
+        # the following modes are rather not to be used and probably can be removed
         # --------------------------
         # zeros
         if self.ancestral_mode == "zeros":
@@ -419,10 +402,7 @@ class InferTskit:
         # Open zarr
         vcf_zarr = zarr.open(self.zarr_file, mode="a")
 
-        # --------------------------------------------------
         # Add population metadata
-        # --------------------------------------------------
-
         populations = labels[population_identifier].unique().tolist()
 
         schema = json.dumps(
@@ -449,9 +429,7 @@ class InferTskit:
         )
 
 
-        # --------------------------------------------------
-        # Match VCF samples to population
-        # --------------------------------------------------
+        # Match VCF samples and populations
 
         sample_ids = [
             s.decode() if isinstance(s, bytes) else s
@@ -484,16 +462,14 @@ class InferTskit:
 
             individuals_population[i] = populations.index(pop)
 
-
+        #final zarr output
         zarr.save(
             f"{self.zarr_file}/individuals_population",
             individuals_population
         )
 
 
-        # --------------------------------------------------
         # Optional individual metadata
-        # --------------------------------------------------
 
         metadata = []
 

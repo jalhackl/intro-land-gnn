@@ -13,7 +13,8 @@ thresholds = trace_config["thresholds"]
 tree_types = [
     ".relate.trees",
     ".ts",
-    "_tsinfer.ts"
+    "_tsinfer.ts",
+    ".singer.trees"
 ]
 
 # -------------------------

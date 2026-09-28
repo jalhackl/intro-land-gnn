@@ -93,7 +93,7 @@ def generate_mutation_rate_map(
 
 
 
-def effective_population_size(
+def effective_population_size_from_yaml(
     yaml_path,
     mode="all",
     demes_subset=None,

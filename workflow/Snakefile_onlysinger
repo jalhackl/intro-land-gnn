@@ -1,0 +1,87 @@
+include: "rules/common.smk"
+#include: "rules/simulate.smk"
+include: "rules/simulate_rep.smk"
+include: "rules/install_external_tools.smk"
+include: "rules/process_vcf.smk"
+
+include: "rules/apply_tree_sequence_inference_methods.smk"
+#include: "rules/SPrime/run_Sprime.smk"
+
+#include: "rules/hmmix/run_hmmix_classic.smk"
+#include: "rules/hmmix/run_hmmix_artemis.smk"
+
+#include: "rules/sstar/run_sstar.smk"
+
+include: "rules/plot.smk"
+
+include: "rules/trace/run_trace.smk"
+
+import os
+
+scenarios = main_config["scenarios"]  # e.g., ["config_ArchIE_4D19_1", ...]
+results_folder = main_config["results_folder"]
+
+tree_types = [".relate.trees", ".ts", "_tsinfer.ts"]
+
+# Build a list of files to plot based on the models in the config
+base_path = main_config["results_folder"]
+
+plot_inputs = [
+    f"{base_path}/{model}/{model}_accuracy_aggregated.txt"
+    for model in main_config["models_for_plotting"]
+]
+
+
+
+rule all:
+    input:
+        expand(
+            os.path.join(
+                main_config["test_data_folder"],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}.ts"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[scenario_configs[s]["output_prefix"] for s in scenario_configs]
+        ),
+
+
+
+        # --------------------------------------------------
+        # SINGER output
+        # --------------------------------------------------
+        expand(
+            os.path.join(
+                main_config["test_data_folder"],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}.singer.trees"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[
+                scenario_configs[s]["output_prefix"]
+                for s in scenario_configs
+            ]
+        ),
+
+        
+        # os.path.join(
+        #     results_folder,
+        #     "tracehmm",
+        #     "tracehmm_metrics_summary.csv"
+        # ),
+
+        # f"{results_folder}/plots/tracehmm_precision_recall_curve.pdf",
+        # f"{results_folder}/plots/tracehmm_confusion_matrix.pdf"
+        

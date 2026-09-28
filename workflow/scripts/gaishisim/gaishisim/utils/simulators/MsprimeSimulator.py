@@ -33,6 +33,7 @@ from .simulation_batch_processing import get_true_tracts_batch
 from .simulation_utils import generate_mutation_rate_map
 from gaishisim.utils.simulators.InferRelate import InferRelate
 from gaishisim.utils.simulators.InferTskit import InferTskit
+from gaishisim.utils.simulators.InferSinger import InferSinger
 
 
 class MsprimeSimulator(DataSimulator):
@@ -69,10 +70,12 @@ class MsprimeSimulator(DataSimulator):
 
         get_phased_and_unphased_tract_file: bool=True,
 
-        create_relate_output: bool = True, relate_config  = None,
-        create_tsinfer_output: bool = True, tsinfer_config = None,
+        create_relate_output: bool = False, relate_config  = None,
+        create_tsinfer_output: bool = False, tsinfer_config = None,
         tsinfer_check_ancestral_state: bool = True,
 
+        create_singer_output: bool = False, singer_config = None,
+        create_poplabels: bool = True
 
     ):
         """
@@ -174,6 +177,11 @@ class MsprimeSimulator(DataSimulator):
 
         self.create_tsinfer_output = create_tsinfer_output
 
+        self.create_singer_output = create_singer_output
+        self.singer_config = singer_config or {}
+
+        self.create_poplabels = create_poplabels
+
     def run(self, rep: int = None, seed: int = None) -> list[dict[str, str]]:
         """
         Executes the simulation with optional runtime arguments.
@@ -212,6 +220,10 @@ class MsprimeSimulator(DataSimulator):
         tgt_ind_file = os.path.join(output_dir, f"{output_prefix}.tgt.ind.list")
         seed_file = os.path.join(output_dir, f"{output_prefix}.seedmsprime")
 
+        poplabels_file = os.path.join(
+            output_dir, f"{output_prefix}.poplabels"
+        )
+
         file_paths = {
             "ts_file": ts_file,
             "vcf_file": vcf_file,
@@ -219,6 +231,7 @@ class MsprimeSimulator(DataSimulator):
             "ref_ind_file": ref_ind_file,
             "tgt_ind_file": tgt_ind_file,
             "seed_file": seed_file,
+            "poplabels_file": poplabels_file,
         }
 
         self._create_ref_tgt_file(self.nref, self.ntgt, ref_ind_file, tgt_ind_file)
@@ -316,6 +329,16 @@ class MsprimeSimulator(DataSimulator):
                 o.write(f"{seed}\n")
 
 
+        # poplabels (used for singer)
+        if self.create_poplabels:
+            self._write_relate_poplabels(
+                ts=ts,
+                ref_ind_file=ref_ind_file,
+                tgt_ind_file=tgt_ind_file,
+                output_file=poplabels_file,
+            )
+
+
         if not self.get_phased_and_unphased_tract_file:
 
             if not self.true_tracts_batch_processing:
@@ -370,6 +393,8 @@ class MsprimeSimulator(DataSimulator):
         if self.create_tsinfer_output:
             self._run_tsinfer_inference(vcf_file, output_prefix, ts_file=ts_file)
 
+        if self.create_singer_output:
+            self._run_singer_inference(vcf_file, output_prefix, seed, output_dir )
 
 
         return [file_paths]
@@ -669,3 +694,206 @@ class MsprimeSimulator(DataSimulator):
         
 
         infer.run()
+
+
+    def _run_singer_inference(self, vcf_file, output_prefix, seed, output_dir, chromosome = "1", n_posterior_samples=1, ratio=1, thin=20, polarization=0.99, Ne=None, singer_path = "resources/singer/releases", start=0, end=None):
+
+        singer_prefix = os.path.join(output_dir, f"{output_prefix}.singer")
+
+
+        infer = InferSinger(vcf_file = vcf_file,
+        #output_prefix = self.output_prefix,
+        output_prefix = singer_prefix,
+        mutation_rate = self.mut_rate,
+        start = start,
+        end = end,
+
+        singer_path = singer_path,
+
+        Ne = Ne,
+
+        recombination_map = self.rec_map,
+        mutation_map = self.mut_map,
+
+        ratio = ratio,
+
+        #samples: int = 100,
+        thin  = thin,
+        polarization  = polarization,#0.5,
+        n_posterior_samples = n_posterior_samples,
+
+        convert_to_trees= True,
+
+        original_ts = None,
+        chromosome = chromosome,
+        sequence_length = None,)
+
+        infer.run()
+
+
+    def _write_relate_poplabels_simple(
+        self,
+        ts: tskit.TreeSequence,
+        ref_ind_file: str,
+        tgt_ind_file: str,
+        output_file: str,
+    ) -> None:
+        """
+        Write a Relate-compliant .poplabels file for all individuals listed
+        in the reference and target individual files.
+
+        The output has the format:
+
+            sample population group sex
+
+        For diploid samples, sex is written as "NA".
+        For haploid samples, sex is written as 1.
+
+        Samples are written in the same order as they occur in the
+        reference individual file followed by the target individual file.
+        """
+
+        # Read reference and target individual IDs.
+        with open(ref_ind_file) as f:
+            ref_samples = [line.strip() for line in f if line.strip()]
+
+        with open(tgt_ind_file) as f:
+            tgt_samples = [line.strip() for line in f if line.strip()]
+
+        samples = ref_samples + tgt_samples
+
+        with open(output_file, "w") as out:
+            out.write("sample population group sex\n")
+
+            for sample_id in samples:
+                if not sample_id.startswith("tsk_"):
+                    raise ValueError(
+                        f"Unexpected sample ID '{sample_id}'. "
+                        "Expected IDs of the form 'tsk_<individual_id>'."
+                    )
+
+                try:
+                    individual_id = int(sample_id.split("_")[-1])
+                except ValueError as e:
+                    raise ValueError(
+                        f"Could not extract individual ID from '{sample_id}'."
+                    ) from e
+
+                if individual_id >= ts.num_individuals:
+                    raise ValueError(
+                        f"Individual {individual_id} from sample '{sample_id}' "
+                        f"does not exist in the tree sequence "
+                        f"(num_individuals={ts.num_individuals})."
+                    )
+
+                individual = ts.individual(individual_id)
+
+                if len(individual.nodes) == 0:
+                    raise ValueError(
+                        f"Individual {individual_id} ('{sample_id}') has no nodes."
+                    )
+
+                # use the first node (of which are two in the diploid organism).
+                node = ts.node(individual.nodes[0])
+
+                population = ts.population(node.population)
+                pop_label = population.metadata.get(
+                    "name",
+                    str(node.population),
+                )
+
+                group_label = pop_label
+
+                #   diploid: NA
+                #   haploid: 1
+                if self.ploidy == 1:
+                    sex = 1
+                else:
+                    sex = "NA"
+
+                out.write(
+                    f"{sample_id} {pop_label} {group_label} {sex}\n"
+                )
+
+
+    def _write_relate_poplabels(
+        self,
+        ts: tskit.TreeSequence,
+        ref_ind_file: str,
+        tgt_ind_file: str,
+        output_file: str,
+    ) -> None:
+        """
+        Write a Relate-compatible .poplabels file.
+
+        The samples are written in the same order as the reference
+        individual file followed by the target individual file.
+
+        Format:
+            sample population group sex
+        """
+
+        with open(ref_ind_file) as f:
+            ref_samples = [line.strip() for line in f if line.strip()]
+
+        with open(tgt_ind_file) as f:
+            tgt_samples = [line.strip() for line in f if line.strip()]
+
+        with open(output_file, "w") as out:
+            out.write("sample population group sex\n")
+
+            for sample_id in ref_samples:
+                self._write_poplabel_row(
+                    out=out,
+                    sample_id=sample_id,
+                    population=self.ref_id,
+                )
+
+            for sample_id in tgt_samples:
+                self._write_poplabel_row(
+                    out=out,
+                    sample_id=sample_id,
+                    population=self.tgt_id,
+                )
+
+
+    def _write_poplabel_row(
+        self,
+        out,
+        sample_id: str,
+        population: str,
+    ) -> None:
+        """
+        Write one row of a Relate .poplabels file.
+        """
+
+        if not sample_id.startswith("tsk_"):
+            raise ValueError(
+                f"Unexpected sample ID '{sample_id}'. "
+                "Expected IDs of the form 'tsk_<individual_id>'."
+            )
+
+        try:
+            individual_id = int(sample_id.split("_")[-1])
+        except ValueError as e:
+            raise ValueError(
+                f"Could not extract individual ID from '{sample_id}'."
+            ) from e
+
+        if individual_id >= self.nref + self.ntgt:
+            raise ValueError(
+                f"Individual {individual_id} from sample '{sample_id}' "
+                f"is outside the simulated sample range "
+                f"[0, {self.nref + self.ntgt})."
+            )
+
+        group = population
+
+        if self.ploidy == 1:
+            sex = 1
+        else:
+            sex = "NA"
+
+        out.write(
+            f"{sample_id} {population} {group} {sex}\n"
+        )

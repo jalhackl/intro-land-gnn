@@ -3,6 +3,8 @@ include: "rules/common.smk"
 include: "rules/simulate_rep.smk"
 include: "rules/install_external_tools.smk"
 include: "rules/process_vcf.smk"
+
+include: "rules/apply_tree_sequence_inference_methods.smk"
 #include: "rules/SPrime/run_Sprime.smk"
 
 #include: "rules/hmmix/run_hmmix_classic.smk"
@@ -19,7 +21,7 @@ import os
 scenarios = main_config["scenarios"]  # e.g., ["config_ArchIE_4D19_1", ...]
 results_folder = main_config["results_folder"]
 
-tree_types = [".relate.trees", ".ts", "_tsinfer.ts"]
+tree_types = [".relate.trees", ".ts", "_tsinfer.ts", ".singer.trees"]
 
 # Build a list of files to plot based on the models in the config
 base_path = main_config["results_folder"]
@@ -29,9 +31,6 @@ plot_inputs = [
     for model in main_config["models_for_plotting"]
 ]
 
-# individual results folders
-#hmmix_results_dir = os.path.join(results_folder, "hmmix")
-#hmmix_artemis_results_dir = os.path.join(results_folder, "hmmix_artemis")
 
 
 
@@ -77,11 +76,81 @@ rule all:
             tree_type=tree_types
         ),
 
-        os.path.join(
-            results_folder,
-            "tracehmm",
-            "tracehmm_metrics_summary.csv"
+
+        # --------------------------------------------------
+        # tsinfer output
+        # --------------------------------------------------
+        expand(
+            os.path.join(
+                main_config["test_data_folder"],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}_tsinfer.ts"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[
+                scenario_configs[s]["output_prefix"]
+                for s in scenario_configs
+            ]
         ),
 
-        f"{results_folder}/plots/tracehmm_precision_recall_curve.pdf",
-        f"{results_folder}/plots/tracehmm_confusion_matrix.pdf"
+        # --------------------------------------------------
+        # Relate output
+        # --------------------------------------------------
+        expand(
+            os.path.join(
+                main_config["test_data_folder"],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}.relate.trees"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[
+                scenario_configs[s]["output_prefix"]
+                for s in scenario_configs
+            ]
+        ),
+
+
+        # --------------------------------------------------
+        # SINGER output
+        # --------------------------------------------------
+        expand(
+            os.path.join(
+                main_config["test_data_folder"],
+                "{scenario}",
+                "{rep}",
+                "{prefix}.{rep}.singer.trees"
+            ),
+            scenario=list(scenario_configs.keys()),
+            rep=[
+                r
+                for s in scenario_configs
+                for r in range(scenario_configs[s]["nrep"])
+            ],
+            prefix=[
+                scenario_configs[s]["output_prefix"]
+                for s in scenario_configs
+            ]
+        ),
+
+        
+         os.path.join(
+             results_folder,
+             "tracehmm",
+             "tracehmm_metrics_summary.csv"
+         ),
+
+         f"{results_folder}/plots/tracehmm_precision_recall_curve.pdf",
+         f"{results_folder}/plots/tracehmm_confusion_matrix.pdf"
+        

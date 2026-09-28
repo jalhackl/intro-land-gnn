@@ -3,8 +3,13 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 import demes
+import tskit
 
-from .simulation_utils import effective_population_size
+import json
+import tszip
+
+from .simulation_utils import effective_population_size_from_yaml
+from .tree_functions import compute_eff_popsize_from_diversity
 
 
 class InferRelate:
@@ -14,10 +19,7 @@ class InferRelate:
     msprime VCF → Relate inference → RelateParallel (optional)
     → tskit tree sequence conversion
 
-    Ne policy:
-        1. demes (true simulation Ne)
-        2. fixed Ne
-        3. Relate estimation
+    for calculating Ne, per default diversity is calculated from the vcf-file
     """
 
     def __init__(
@@ -35,8 +37,13 @@ class InferRelate:
         chromosome: str = "1",
         threads: int = 1,
         memory: int = 5,
-        try_to_estimate_Ne_from_demes=False,
-        default_Ne: int = 30000
+        Ne_estimate_method="diversity", #diversity: from nucleotide diversity, "demes": read from demes, None: default value (usually diversity is recommended)
+        default_Ne: int = 30000,
+        original_ts_file = None,
+        create_relate_poplabels: bool = True,
+        # alternatively, it should be possible to load a poplabels file
+        #poplabels_file = None,
+        add_poplabels_metadata: bool = True
     ):
         self.vcf_file = Path(vcf_file)
         #self.output_prefix = Path(output_prefix)
@@ -61,7 +68,7 @@ class InferRelate:
         self.chromosome = chromosome
         self.threads = threads
         self.memory = memory
-        self.try_to_estimate_Ne_from_demes = try_to_estimate_Ne_from_demes
+        self.Ne_estimate_method = Ne_estimate_method
 
 
         self.relate_path = Path(relate_path).resolve()
@@ -85,13 +92,26 @@ class InferRelate:
         self.trees_file = f"{self.output_prefix}.trees"
         
         self.default_Ne = default_Ne
+        self.original_ts_file = original_ts_file
+
+        #poplabel file - necessary for downstream analyses
+        self.create_relate_poplabels = create_relate_poplabels
+        self.add_poplabels_metadata = add_poplabels_metadata
+
+        self.poplabels_file = (
+            self.output_dir / f"{self.relate_output_name}.relate.poplabels"
+        ).resolve()
+
+        self.metadata_trees_file = (
+            self.output_dir / f"{self.relate_output_name}.metadata.trees"
+        ).resolve()
 
     # ==========================================================
     # MAIN PIPELINE
     # ==========================================================
 
+
     def run(self):
-        print("InferRelate new version")
 
         self._check_binaries()
 
@@ -105,7 +125,13 @@ class InferRelate:
         else:
             self._run_relate_standard(Ne_value)
 
+        if self.create_relate_poplabels:
+            self._create_relate_poplabels()
+
         self._convert_to_trees()
+
+        if self.add_poplabels_metadata:
+            self._add_poplabels_metadata()
 
     # ==========================================================
     # NE POLICY
@@ -115,8 +141,29 @@ class InferRelate:
     def _resolve_Ne(self) -> int:
         if self.Ne is not None:
             return self.Ne
+        
+        if self.Ne_estimate_method == "diversity":
 
-        if self.demes_file is not None and self.try_to_estimate_Ne_from_demes:
+            from pathlib import Path
+            import tskit
+
+            if self.original_ts_file is None:
+                original_ts = None
+            elif isinstance(self.original_ts_file, (str, Path)):
+                original_ts = tskit.load(self.original_ts_file)
+            else:
+                original_ts = self.original_ts_file
+
+            return compute_eff_popsize_from_diversity(
+                mutation_rate=self.mutation_rate,
+                vcf_file=self.vcf_file,
+                ts=original_ts,
+                chr=self.chromosome
+            )
+
+
+
+        if self.demes_file is not None and self.Ne_estimate_method == "demes":
             return self._Ne_from_demes()
 
         #default value
@@ -130,7 +177,7 @@ class InferRelate:
         Uses recent extreme by default.
         """
 
-        ne_dict = effective_population_size(
+        ne_dict = effective_population_size_from_yaml(
             yaml_path=self.demes_file,
             mode="recent",
             summary="extreme",
@@ -153,11 +200,9 @@ class InferRelate:
 
         
 
-
     # ==========================================================
     # RELATE STANDARD
     # ==========================================================
-
 
     def _run_relate_standard(self, Ne: int):
         cmd = [
@@ -194,7 +239,7 @@ class InferRelate:
             "-m", str(self.mutation_rate),
             "-N", str(Ne),
 
-            # IMPORTANT: basename only
+            # basename only
             "-o", self.relate_output_name,
 
             "--threads", str(self.threads),
@@ -203,11 +248,7 @@ class InferRelate:
         # Run in correct output directory so files are written properly
         self._run_command(cmd, "RelateParallel", cwd=self.output_dir)
 
-    # ==========================================================
-    # CONVERT TO tskit TREE SEQUENCE
-    # ==========================================================
-
-
+    # CONVERT TO tskit tree sequence command
 
     def _convert_to_trees(self):
 
@@ -266,6 +307,7 @@ class InferRelate:
     # workflow functions
     # ==========================================================
 
+    # check existence of relate binaries
     def _check_binaries(self):
         if not self.relate_bin.exists():
             raise FileNotFoundError("Relate binary missing")
@@ -292,4 +334,429 @@ class InferRelate:
             print(result.stderr)
             raise RuntimeError(f"{label} failed")
 
-        print("done")
+        print("Relate processing finished!")
+
+
+    def _write_relate_poplabels(
+        self,
+        ts: tskit.TreeSequence,
+        sample_file: str,
+        output_file: str,
+    ) -> None:
+        """
+        Write a Relate-compatible .poplabels file. (sample population group sex)
+        The samples are written in the same order as the Relate
+        .sample file.
+
+        msprime sample IDs are expected to be tsk_<individual_id>
+        for other input, a different function has to be used
+
+        Format:
+            sample population group sex
+        """
+
+        with open(sample_file) as f:
+            lines = [line.strip().split() for line in f if line.strip()]
+
+        # Relate .sample has a header on the first line.
+        samples = lines[1:]
+
+        with open(output_file, "w") as out:
+            out.write("sample population group sex\n")
+
+            for row in samples:
+                id1 = row[0]
+                id2 = row[1]
+
+                if id2 == "NA":
+                    # Haploid
+                    sample_id = id1
+                    sex = 1
+                else:
+                    # Diploid
+                    sample_id = id1
+                    sex = "NA"
+
+                # msprime sample IDs are expected to be tsk_<individual_id>
+                # for other input, a different function has to be used
+                try:
+                    individual_id = int(sample_id.split("_")[-1])
+                except ValueError as e:
+                    raise ValueError(
+                        f"Could not extract individual ID from '{sample_id}'. "
+                        "Expected an ID such as 'tsk_0'."
+                    ) from e
+
+                if individual_id >= ts.num_individuals:
+                    raise ValueError(
+                        f"Individual {individual_id} from '{sample_id}' "
+                        f"does not exist in the tree sequence "
+                        f"(num_individuals={ts.num_individuals})."
+                    )
+
+                individual = ts.individual(individual_id)
+
+                if len(individual.nodes) == 0:
+                    raise ValueError(
+                        f"Individual {individual_id} ('{sample_id}') "
+                        "has no nodes in the tree sequence."
+                    )
+
+                # use first node to determine the population.
+                node = ts.node(individual.nodes[0])
+                population = ts.population(node.population)
+
+                pop_label = population.metadata.get(
+                    "name",
+                    str(node.population),
+                )
+
+                group_label = pop_label
+
+                out.write(
+                    f"{sample_id} {pop_label} {group_label} {sex}\n"
+                )
+
+
+
+    def _create_relate_poplabels(self):
+        if self.original_ts_file is None:
+            raise ValueError(
+                "create_relate_poplabels=True currently requires "
+                "original_ts_file to be provided (of course, one could perhaps also load the data from the ind-files and/or the vcf)."
+            )
+
+
+        ts = tskit.load(self.original_ts_file)
+
+        output_file = self.output_dir / f"{self.relate_output_name}.relate.poplabels"
+
+        self._write_relate_poplabels(
+            ts=ts,
+            sample_file=str(self.sample_file),
+            output_file=str(output_file),
+        )
+
+        print(f"Created Relate poplabels: {output_file}")
+
+
+    def _add_poplabels_metadata_tszip(self):
+
+        if not self.poplabels_file.exists():
+            raise FileNotFoundError(
+                f"Poplabels file not found: {self.poplabels_file}"
+            )
+
+        if not Path(self.trees_file).exists():
+            raise FileNotFoundError(
+                f"Relate tree sequence not found: {self.trees_file}"
+            )
+
+        print(f"Loading Relate tree sequence from {self.trees_file}")
+        ts = tszip.load(self.trees_file)
+
+        tables = ts.dump_tables()
+
+        # --------------------------------------------------------------
+        # Read poplabels
+        # --------------------------------------------------------------
+
+        print(
+            f"Loading population and individual information from "
+            f"{self.poplabels_file}"
+        )
+
+        with open(self.poplabels_file) as f:
+            header = f.readline().strip().split()
+
+            expected_header = ["sample", "population", "group", "sex"]
+
+            if header != expected_header:
+                raise ValueError(
+                    f"Unexpected poplabels header: {header}. "
+                    f"Expected: {expected_header}"
+                )
+
+            metadata_rows = []
+
+            for line_number, line in enumerate(f, start=2):
+                fields = line.strip().split()
+
+                if len(fields) != len(header):
+                    raise ValueError(
+                        f"Malformed poplabels line {line_number}: {fields}"
+                    )
+
+                metadata_rows.append(dict(zip(header, fields)))
+
+        print(f"- Number of individuals: {len(metadata_rows)}")
+
+        # --------------------------------------------------------------
+        # Populations
+        # --------------------------------------------------------------
+
+        populations = sorted(
+            {row["population"] for row in metadata_rows}
+        )
+
+        print(f"- Number of unique populations: {len(populations)}")
+
+        population_to_id = {
+            pop: i for i, pop in enumerate(populations)
+        }
+
+        # --------------------------------------------------------------
+        # Validate individual count
+        # --------------------------------------------------------------
+
+        if len(metadata_rows) != tables.individuals.num_rows:
+            raise ValueError(
+                "Number of individuals in .poplabels does not match "
+                f"the Relate tree sequence: "
+                f"{len(metadata_rows)} poplabels vs "
+                f"{tables.individuals.num_rows} individuals."
+            )
+
+        # --------------------------------------------------------------
+        # Individual metadata
+        # --------------------------------------------------------------
+
+        print("Setting individual metadata")
+
+        tables.individuals.metadata_schema = tskit.MetadataSchema(None)
+
+        metadata_column = [
+            json.dumps(row).encode("utf-8")
+            for row in metadata_rows
+        ]
+
+        md, md_offset = tskit.pack_bytes(metadata_column)
+
+        tables.individuals.set_columns(
+            flags=tables.individuals.flags,
+            location=tables.individuals.location,
+            location_offset=tables.individuals.location_offset,
+            parents=tables.individuals.parents,
+            parents_offset=tables.individuals.parents_offset,
+            metadata=md,
+            metadata_offset=md_offset,
+        )
+
+        # --------------------------------------------------------------
+        # Population metadata
+        # --------------------------------------------------------------
+
+        print("Setting population metadata")
+
+        tables.populations.metadata_schema = tskit.MetadataSchema(None)
+
+        population_metadata = [
+            json.dumps({"name": pop}).encode("utf-8")
+            for pop in populations
+        ]
+
+        md, md_offset = tskit.pack_bytes(population_metadata)
+
+        tables.populations.set_columns(
+            metadata=md,
+            metadata_offset=md_offset,
+        )
+
+        # --------------------------------------------------------------
+        # Set individual IDs on sample nodes
+        # --------------------------------------------------------------
+
+        print("Setting individual IDs on sample nodes")
+
+        sample_nodes = ts.samples()
+
+        if len(sample_nodes) != 2 * len(metadata_rows):
+            raise ValueError(
+                "Unexpected number of sample nodes: "
+                f"{len(sample_nodes)} nodes for "
+                f"{len(metadata_rows)} individuals. "
+                "This implementation expects diploid Relate samples."
+            )
+
+        nodes_individual = tables.nodes.individual.copy()
+
+        for individual_id, node_id_pair in enumerate(
+            sample_nodes.reshape((-1, 2))
+        ):
+            for node_id in node_id_pair:
+                nodes_individual[node_id] = individual_id
+
+        tables.nodes.individual = nodes_individual
+
+        # --------------------------------------------------------------
+        # Set population IDs on sample nodes
+        # --------------------------------------------------------------
+
+        print("Setting population IDs on sample nodes")
+
+        nodes_population = tables.nodes.population.copy()
+
+        for individual_id, row in enumerate(metadata_rows):
+
+            population_id = population_to_id[row["population"]]
+
+            for node_id in ts.individual(individual_id).nodes:
+                nodes_population[node_id] = population_id
+
+        tables.nodes.population = nodes_population
+
+        # Create new tree sequence
+        new_ts = tables.tree_sequence()
+
+        tszip.compress(
+            new_ts,
+            str(self.metadata_trees_file),
+        )
+
+        print(
+            f"Done. Metadata-enriched tree sequence: "
+            f"{self.metadata_trees_file}"
+        )
+
+
+    def _add_poplabels_metadata(self):
+        ts_file = self.trees_file
+        poplabels_file = self.poplabels_file
+        out_trees_file = self.metadata_trees_file
+
+        print(f"ts_file: {ts_file}")
+        print(f"poplabels_file: {poplabels_file}")
+        print(f"out_trees_file: {out_trees_file}")
+
+        print(f"Loading tree sequence from {ts_file}")
+        ts = tskit.load(ts_file)
+
+        tables = ts.dump_tables()
+
+        # load .poplabels
+        print(f"Loading population and individual info from {poplabels_file}")
+
+        uniq_pops = []
+        metadata_column = []
+
+        with open(poplabels_file, "r") as ifl:
+            header = ifl.readline().strip().split()
+
+            assert header == ["sample", "population", "group", "sex"]
+
+            for l in ifl:
+                line = l.strip().split()
+
+                metadata = {}
+
+                for k, v in zip(header, line):
+                    metadata[k] = v
+
+                metadata_column.append(
+                    json.dumps(metadata).encode("utf-8")
+                )
+
+                uniq_pops.append(line[1])
+
+        uniq_pops = sorted(set(uniq_pops))
+
+        print(f"- Number of individuals: {len(metadata_column)}")
+        print(f"- Number of unique populations: {len(uniq_pops)}")
+
+        # set individuals table
+        print("Setting individuals table")
+
+        basic_schema = tskit.MetadataSchema(None)
+        tables.individuals.metadata_schema = basic_schema
+
+        flags = [0 for x in range(len(metadata_column))]
+
+        encoded_metadata_column = [
+            tables.individuals.metadata_schema.validate_and_encode_row(r)
+            for r in metadata_column
+        ]
+
+        md, md_offset = tskit.pack_bytes(encoded_metadata_column)
+
+        tables.individuals.set_columns(
+            flags=flags,
+            metadata=md,
+            metadata_offset=md_offset,
+        )
+
+        # set populations table
+        print("Setting populations table")
+
+        population_metadata_column = []
+
+        for pop in uniq_pops:
+            population_metadata_column.append(
+                json.dumps({"name": pop}).encode("utf-8")
+            )
+
+        tables.populations.metadata_schema = basic_schema
+
+        encoded_pop_metadata_column = [
+            tables.populations.metadata_schema.validate_and_encode_row(r)
+            for r in population_metadata_column
+        ]
+
+        md, md_offset = tskit.pack_bytes(encoded_pop_metadata_column)
+
+        tables.populations.set_columns(
+            metadata=md,
+            metadata_offset=md_offset,
+        )
+
+        # set individual id of sample nodes in node table
+        print("Setting individual id of sample nodes in node table")
+
+        num_individuals = len(metadata_column)
+
+        new_individual_of_sample_nodes = []
+
+        for i in range(num_individuals):
+            new_individual_of_sample_nodes.extend([i, i])
+
+        new_individual = tables.nodes.individual
+
+        new_individual[:len(new_individual_of_sample_nodes)] = (
+            new_individual_of_sample_nodes
+        )
+
+        tables.nodes.individual = new_individual
+
+        # set population of sample nodes in node table
+        print("Setting population id of sample nodes in node table")
+
+        num_indivs = len(tables.individuals)
+
+        new_population_for_sample_nodes = []
+
+        for idx in range(num_indivs):
+            indiv = tables.individuals[idx]
+
+            pop = json.loads(
+                indiv.metadata.decode("utf-8")
+            )["population"]
+
+            pop_idx = uniq_pops.index(pop)
+
+            new_population_for_sample_nodes.extend(
+                [pop_idx, pop_idx]
+            )
+
+        new_population = tables.nodes.population
+
+        new_population[:len(new_population_for_sample_nodes)] = (
+            new_population_for_sample_nodes
+        )
+
+        tables.nodes.population = new_population
+
+        # convert to new tree sequence
+        new_ts = tables.tree_sequence()
+
+        new_ts.dump(out_trees_file)
+
+        print(f"Done. out tree sequence: {out_trees_file}")
