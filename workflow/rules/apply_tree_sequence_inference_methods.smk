@@ -111,6 +111,19 @@ rule apply_relate:
             "{scenario}",
             "{rep}",
             "{prefix}.{rep}.relate.trees"
+        ),
+        # additional output for metadata and reestimation
+                trees_meta=os.path.join(
+            main_config["test_data_folder"],
+            "{scenario}",
+            "{rep}",
+            "{prefix}.{rep}.relate_reestimated.metadata.trees"
+        ),
+                        trees_reest_meta=os.path.join(
+            main_config["test_data_folder"],
+            "{scenario}",
+            "{rep}",
+            "{prefix}.{rep}.relate_reestimated.trees"
         )
 
     params:

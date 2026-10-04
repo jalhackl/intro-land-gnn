@@ -78,7 +78,7 @@ rule tracehmm_extract:
         )
 
     params:
-        t=20000
+        t=15000
 
     conda:
         "../../envs/trace-env.yaml"

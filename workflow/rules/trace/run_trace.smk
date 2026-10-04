@@ -14,7 +14,9 @@ tree_types = [
     ".relate.trees",
     ".ts",
     "_tsinfer.ts",
-    ".singer.trees"
+    ".singer.trees",
+    ".relate_reestimated.trees",
+    ".relate_reestimated.metadata.trees",
 ]
 
 # -------------------------

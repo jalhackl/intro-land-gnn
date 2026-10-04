@@ -21,7 +21,7 @@ import os
 scenarios = main_config["scenarios"]  # e.g., ["config_ArchIE_4D19_1", ...]
 results_folder = main_config["results_folder"]
 
-tree_types = [".relate.trees", ".ts", "_tsinfer.ts", ".singer.trees"]
+tree_types = [".relate.trees", ".ts", "_tsinfer.ts", ".singer.trees", ".relate_reestimated.trees", ".relate_reestimated.metadata.trees"]
 
 # Build a list of files to plot based on the models in the config
 base_path = main_config["results_folder"]

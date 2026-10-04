@@ -43,10 +43,15 @@ class InferRelate:
         create_relate_poplabels: bool = True,
         # alternatively, it should be possible to load a poplabels file
         #poplabels_file = None,
-        add_poplabels_metadata: bool = True
+        add_poplabels_metadata: bool = True,
+        reestimate_branch_lengths: bool = True,
+        overwrite_original_trees_with_reestimated=False,
+        also_process_not_reestimated_versions=True,
+        years_per_gen=29
     ):
+        self.years_per_gen = years_per_gen
+        
         self.vcf_file = Path(vcf_file)
-        #self.output_prefix = Path(output_prefix)
         self.output_prefix = Path(output_prefix).resolve()
 
         # directory where outputs should go
@@ -54,6 +59,15 @@ class InferRelate:
 
         # name for RelateParallel 
         self.relate_output_name = self.output_prefix.name
+
+
+        # name for branch length updated version
+        # (application of reestimatepopulationsizes)
+        self.output_prefix_reestimated = (
+            self.output_prefix.parent
+            / (self.output_prefix.name + "_reestimated")
+        ).resolve()
+        self.relate_output_name_reestimated = self.output_prefix.name + "_reestimated"
 
         self.recombination_rate = recombination_rate
         self.sequence_length = sequence_length
@@ -86,10 +100,18 @@ class InferRelate:
         self.map_file = (self.output_dir / f"{self.relate_output_name}.map").resolve()
 
 
-        self.ne_script = self.relate_path / "bin" / "EstimatePopulationSize.sh"
+        self.ne_script = self.relate_path / "scripts" / "EstimatePopulationSize" / "EstimatePopulationSize.sh"
+        self.reestimate_branch_lengths = reestimate_branch_lengths
+        self.overwrite_original_trees_with_reestimated = overwrite_original_trees_with_reestimated
+        self.also_process_not_reestimated_versions = also_process_not_reestimated_versions
+
+
         self.popsize_file = f"{self.output_prefix}.PopSize.estimated_pop_size.txt"
 
         self.trees_file = f"{self.output_prefix}.trees"
+        #reestimated version
+        self.trees_file_reestimated = f"{self.output_prefix_reestimated}.trees"
+        
         
         self.default_Ne = default_Ne
         self.original_ts_file = original_ts_file
@@ -101,9 +123,16 @@ class InferRelate:
         self.poplabels_file = (
             self.output_dir / f"{self.relate_output_name}.relate.poplabels"
         ).resolve()
+        #duplicate!
+        #self.poplabels_output_file = self.output_dir / f"{self.relate_output_name}.relate.poplabels"
+
 
         self.metadata_trees_file = (
             self.output_dir / f"{self.relate_output_name}.metadata.trees"
+        ).resolve()
+        #reestimated version
+        self.metadata_trees_file_reestimated = (
+            self.output_dir / f"{self.relate_output_name_reestimated}.metadata.trees"
         ).resolve()
 
     # ==========================================================
@@ -128,10 +157,73 @@ class InferRelate:
         if self.create_relate_poplabels:
             self._create_relate_poplabels()
 
-        self._convert_to_trees()
+        # call estimatepopulationsizes script
+        if self.reestimate_branch_lengths: 
+            self._run_ne_Script()
 
-        if self.add_poplabels_metadata:
-            self._add_poplabels_metadata()
+            # just the trees file?
+            #if self.overwrite_original_trees_with_reestimated:
+            #    os.replace(self.relate_, final_file)
+
+            self._convert_to_trees(self.output_prefix_reestimated)
+
+            if self.add_poplabels_metadata:
+                self._add_poplabels_metadata(ts_file=self.trees_file_reestimated,
+                                             out_trees_file=self.metadata_trees_file_reestimated)
+
+
+        #overwrite_original_trees_with_reestimated = self.overwrite_original_trees_with_reestimated
+
+        if self.also_process_not_reestimated_versions:
+
+            self._convert_to_trees()
+
+            if self.add_poplabels_metadata:
+                self._add_poplabels_metadata()
+
+
+
+    def _run_ne_Script(self):
+        cmd = [
+            str(self.ne_script),
+            "--input",  self.relate_output_name,
+            "--poplabels", self.poplabels_file,
+            "-m", str(self.mutation_rate),
+            "--years_per_gen", str(self.years_per_gen), 
+            "-o", self.relate_output_name_reestimated,
+            "--noplot" 
+        ]
+
+        self._run_command(cmd, "Relate reestimatiaton Popsizes script", cwd=self.output_dir)    
+
+    ## optional arguments according to relate documentation
+    '''
+    --noanc
+        Optional: Flag specifying whether to reinfer branch lengths at the end. 0: reinfer, 1: don't reinfer. Default: 0.
+    --pop_of_interest
+        Optional: Specifies populations for which population size is estimated. The second column of the .poplabels file is used for population labels. You can specify multiple populations separated by commas, e.g. pop1,pop2. When using this option, it is recommended (but NOT necessary), to run Relate with --annot. This can also be done after running Relate without --annot, see here. 
+    --first_chr & --last_chr
+        Optional: Allow for multiple input files, where filenames are assumed to be numbered by chromosome index.
+        Example: -i example --first_chr 1 --last_chr 2 assumes example_chr1.anc, example_chr1.mut, example_chr2.anc, example_chr2.mut as input.
+    --chr
+        Optional: File containing chromosome names (one per line). Overrides --first_chr and --last_chr.
+        Example: -i example --chr chr.txt assumes example_chr*.anc, example_chr*.mut as input.
+    --threads
+        Optional: Maximum number of threads. Default is 1.
+    --bins
+        Optional: Specify epoch bins. Format: lower, upper, stepsize for function c(0,10^seq(lower, upper, stepsize)). 
+    --years_per_gen
+        Optional: Years per generation. Default: 28.0
+    --num_iter
+        Optional: Number of iterations of the algorithm. Default is 5.
+    --threshold
+        Optional: Float in [0,1] which is the fraction of trees to be dropped, ranked by number of mutations mapping. This option serves two purposes: First, it removes bad/uninformative trees. Second it speeds up the inference. As we increase this value, we remove more trees. Default: 0.5.
+    --seed
+        Optional: Seed for the random number generator used in the MCMC algorithm for estimating branch lengths.
+    --noplot
+        Optional: Takes no value. If specified, do not plot the results using R.
+    '''
+
 
     # ==========================================================
     # NE POLICY
@@ -250,9 +342,9 @@ class InferRelate:
 
     # CONVERT TO tskit tree sequence command
 
-    def _convert_to_trees(self):
+    def _convert_to_trees(self, prefix=None):
 
-        prefix = str(self.output_prefix)
+        prefix = str(prefix if prefix is not None else self.output_prefix)
 
         cmd = [
             str(self.convert_bin),
@@ -359,7 +451,8 @@ class InferRelate:
             lines = [line.strip().split() for line in f if line.strip()]
 
         # Relate .sample has a header on the first line.
-        samples = lines[1:]
+        # and also the second line has to be omitted
+        samples = lines[2:]
 
         with open(output_file, "w") as out:
             out.write("sample population group sex\n")
@@ -429,15 +522,16 @@ class InferRelate:
 
         ts = tskit.load(self.original_ts_file)
 
-        output_file = self.output_dir / f"{self.relate_output_name}.relate.poplabels"
+
+        #output_file = self.output_dir / f"{self.relate_output_name}.relate.poplabels"
 
         self._write_relate_poplabels(
             ts=ts,
             sample_file=str(self.sample_file),
-            output_file=str(output_file),
+            output_file=str(self.poplabels_file),
         )
 
-        print(f"Created Relate poplabels: {output_file}")
+        print(f"Created Relate poplabels: {self.poplabels_file}")
 
 
     def _add_poplabels_metadata_tszip(self):
@@ -619,10 +713,11 @@ class InferRelate:
         )
 
 
-    def _add_poplabels_metadata(self):
-        ts_file = self.trees_file
-        poplabels_file = self.poplabels_file
-        out_trees_file = self.metadata_trees_file
+    def _add_poplabels_metadata(self, ts_file=None, poplabels_file=None, out_trees_file=None):
+        ts_file = str(ts_file if ts_file is not None else self.trees_file)
+        poplabels_file = str(poplabels_file if poplabels_file is not None else self.poplabels_file)
+        out_trees_file = str(out_trees_file if out_trees_file is not None else self.metadata_trees_file)
+
 
         print(f"ts_file: {ts_file}")
         print(f"poplabels_file: {poplabels_file}")

@@ -24,7 +24,7 @@ def _run_pipeline(
     out_base,
     base_dir,
     prefix="trace",
-    t=20000,
+    t=15000,
     chrom="1",
     posterior_threshold=0.9,
     physical_length_threshold=50000,
@@ -213,11 +213,11 @@ def main(
         print(f"TRACE pipeline failed: {e}")
 
         write_empty_outputs(out_base, posterior_threshold)
-        print(f"after TRACE pipeline failed, empty output written")
+        print(f"after RACE pipeline failed, empty output written")
         # optionally write a .failed marker
         with open(out_base + ".done", "w") as f:
             f.write(str(e) + "\n")
-        print(f"after TRACE pipeline failed, final marker written!")
+        print(f"after RACE pipeline failed, new marker written!")
 
 
 def write_empty_outputs(out_base, posterior_threshold):
