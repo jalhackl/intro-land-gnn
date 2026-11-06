@@ -259,8 +259,9 @@ rule apply_singer:
         )
 
     resources:
-        cpus=32,
-        mem_gb=64
+        cpus=8,
+        mem_gb=64,
+		time=1400
 
     log:
         os.path.join(

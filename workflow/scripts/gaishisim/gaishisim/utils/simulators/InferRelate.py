@@ -329,6 +329,7 @@ class InferRelate:
             "--map", self.map_file,
 
             "-m", str(self.mutation_rate),
+            "--memory", str(self.memory),
             "-N", str(Ne),
 
             # basename only
@@ -410,23 +411,37 @@ class InferRelate:
 
 
         
+
     def _run_command(self, cmd, label, cwd=None):
         print(f"\n[{label}]")
-        print(" ".join(map(str, cmd)))
+        print(f"Working directory: {cwd}")
+        print("Command:", " ".join(map(str, cmd)), flush=True)
 
         result = subprocess.run(
             cmd,
             shell=False,
             capture_output=True,
             text=True,
-            cwd=cwd  
+            cwd=cwd,
         )
 
-        if result.returncode != 0:
-            print(result.stderr)
-            raise RuntimeError(f"{label} failed")
+        if result.stdout:
+            print(f"\n[{label} stdout]")
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
 
-        print("Relate processing finished!")
+        if result.stderr:
+            print(f"\n[{label} stderr]")
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+
+        print(f"\n[{label}] Return code: {result.returncode}", flush=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"{label} failed with exit code {result.returncode}"
+            )
+
+        print(f"{label} finished successfully!", flush=True)
+
 
 
     def _write_relate_poplabels(
