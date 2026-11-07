@@ -69,9 +69,11 @@ class InferRelate:
         ).resolve()
         self.relate_output_name_reestimated = self.output_prefix.name + "_reestimated"
 
-        self.recombination_rate = recombination_rate
-        self.sequence_length = sequence_length
-        self.mutation_rate = mutation_rate
+        self.recombination_rate = float(recombination_rate)
+        self.sequence_length = (
+            int(sequence_length) if sequence_length is not None else None
+        )
+        self.mutation_rate = float(mutation_rate)
 
         #self.relate_path = Path(relate_path)
         self.genetic_map = genetic_map
@@ -386,6 +388,12 @@ class InferRelate:
 
 
     def _create_uniform_map(self):
+    
+        if self.sequence_length is None:
+            raise ValueError(
+                "sequence_length must be provided when no genetic map is supplied."
+            )
+    
         total_bp = self.sequence_length
         total_cM = self.sequence_length * self.recombination_rate * 100.0
 
