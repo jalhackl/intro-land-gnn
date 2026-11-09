@@ -4,6 +4,8 @@ import numpy as np
 
 
 def compute_diversity(vcf_file, chr="1"):
+
+    vcf_file = str(vcf_file)
     callset = allel.read_vcf(vcf_file, region=chr, fields=['CHROM','POS','GT'])
     pos = callset['variants/POS']
     gt = allel.GenotypeArray(callset['calldata/GT'])
@@ -20,7 +22,6 @@ def compute_diversity(vcf_file, chr="1"):
 
 
 def compute_eff_popsize_from_diversity(mutation_rate, vcf_file=None, ts=None, chr="1"):
-
 
     if ts:
         pi = ts.diversity()
