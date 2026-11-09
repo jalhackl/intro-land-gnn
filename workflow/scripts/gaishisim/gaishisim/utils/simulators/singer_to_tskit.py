@@ -33,13 +33,43 @@ def read_ts(node_file, edge_file):
     return tables
 
 
-def read_mutation(tables, mutation_file):
+def read_mutation(tables, mutation_file, apply_zero_convention=False, remove_invalid_mutations=True):
     mutations = np.loadtxt(mutation_file)
+
+    # Remove mutations outside the valid sequence interval
+    if not apply_zero_convention:
+        invalid = (
+            (mutations[:, 0] < 0) |
+            (mutations[:, 0] >= tables.sequence_length)
+        )
+    else:
+        invalid = (
+            (mutations[:, 0] < 1) |
+            (mutations[:, 0] > tables.sequence_length)
+        )
+
+    if np.any(invalid):
+        print(
+            f"WARNING: {np.sum(invalid)} mutations "
+            f"outside sequence boundaries."
+        )
+        print("Sequence length:", tables.sequence_length)
+        print("Invalid mutations:", mutations[invalid])
+
+
+    if remove_invalid_mutations:
+        print("Removing invalid mutations.")
+        mutations = mutations[~invalid]
+
+
     n = mutations.shape[0]
     mut_pos = 0
     for i in range(n):
         if mutations[i, 0] != mut_pos:
-            tables.sites.add_row(position=mutations[i, 0], ancestral_state='0')
+            if not apply_zero_convention:
+                tables.sites.add_row(position=mutations[i, 0], ancestral_state='0')
+            else:
+                tables.sites.add_row(position=mutations[i, 0]-1, ancestral_state='0')
             mut_pos = mutations[i, 0]
         site_id = tables.sites.num_rows - 1
         tables.mutations.add_row(site=site_id, node=int(mutations[i, 1]), derived_state=str(int(mutations[i, 3])))
@@ -61,9 +91,9 @@ def read_mutation(tables, mutation_file):
     )
 
 
-def read_ARG(node_file, branch_file, mutation_file):
+def read_ARG(node_file, branch_file, mutation_file, apply_zero_convention=False, remove_invalid_mutations=True):
     tables = read_ts(node_file, branch_file)
-    read_mutation(tables, mutation_file)
+    read_mutation(tables, mutation_file, apply_zero_convention=apply_zero_convention, remove_invalid_mutations=remove_invalid_mutations)
     # added: calculate mutation parents and times
     tables.sort()
     tables.build_index()
@@ -73,22 +103,22 @@ def read_ARG(node_file, branch_file, mutation_file):
     return ts
 
 
-def write_fast_trees(input_prefix, output_prefix, start, end, step):
+def write_fast_trees(input_prefix, output_prefix, start, end, step, apply_zero_convention=False, remove_invalid_mutations=True):
     for i in range(start, end, step):
         trees_file = f"{output_prefix}_{i}.trees"
         node_file = f"{input_prefix}_fast_nodes_{i}.txt"
         branch_file = f"{input_prefix}_fast_branches_{i}.txt"
         mutation_file = f"{input_prefix}_fast_muts_{i}.txt"
-        ts = read_ARG(node_file, branch_file, mutation_file)
+        ts = read_ARG(node_file, branch_file, mutation_file, apply_zero_convention=apply_zero_convention, remove_invalid_mutations=remove_invalid_mutations)
         ts.dump(trees_file)
 
 
-def write_trees(input_prefix, output_prefix, start, end, step):
+def write_trees(input_prefix, output_prefix, start, end, step, apply_zero_convention=False, remove_invalid_mutations=True):
     for i in range(start, end, step):
         trees_file = f"{output_prefix}_{i}.trees"
         node_file = f"{input_prefix}_nodes_{i}.txt"
         branch_file = f"{input_prefix}_branches_{i}.txt"
         mutation_file = f"{input_prefix}_muts_{i}.txt"
-        ts = read_ARG(node_file, branch_file, mutation_file)
+        ts = read_ARG(node_file, branch_file, mutation_file, apply_zero_convention=apply_zero_convention, remove_invalid_mutations=remove_invalid_mutations)
         ts.dump(trees_file) 
 

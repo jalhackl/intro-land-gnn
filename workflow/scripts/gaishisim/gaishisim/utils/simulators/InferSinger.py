@@ -59,6 +59,9 @@ class InferSinger:
         poplabels_file: Optional[str] = None,
         add_metadata: bool = True,
 
+        apply_zero_convention: bool = False,
+        remove_invalid_mutations: bool = True,
+
     ):
 
         self.vcf_file = Path(vcf_file).resolve()
@@ -147,6 +150,10 @@ class InferSinger:
         self.Ne_estimate_method = Ne_estimate_method
 
         self.set_flip_to_ancestral_ref = set_flip_to_ancestral_ref
+
+        # only for correct tskit conversion
+        self.apply_zero_convention = apply_zero_convention
+        self.remove_invalid_mutations = remove_invalid_mutations
 
 
     # poplabel metadata
@@ -457,6 +464,8 @@ class InferSinger:
             start=start,
             end=arg_samples_to_use,
             step=step,
+            apply_zero_convention=self.apply_zero_convention,
+            remove_invalid_mutations=self.remove_invalid_mutations
         )
 
         tree_files = []
