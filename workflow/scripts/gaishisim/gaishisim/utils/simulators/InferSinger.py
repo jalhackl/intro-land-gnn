@@ -33,7 +33,7 @@ class InferSinger:
         start: int = 0,
         end: Optional[int] = None,
 
-        singer_path: str = "resources/singer/releases",
+        singer_path: str = "resources/singer/releases/singer-0.1.9-beta-linux-x86_64",
 
         Ne: Optional[int] = None,
 
@@ -61,6 +61,12 @@ class InferSinger:
 
         apply_zero_convention: bool = False,
         remove_invalid_mutations: bool = True,
+        
+        mode: str = "standard",
+        length_of_segments_to_be_merged: int = 1_000_000,
+        segments: Optional[list[tuple[int, int]]] = None,
+        merge_arg_script: Optional[str] = None,
+        max_workers: int = 1
 
     ):
 
@@ -90,6 +96,8 @@ class InferSinger:
         self.output_prefix = Path(output_prefix).resolve()
 
         self.output_dir = self.output_prefix.parent
+        self.output_dir = Path(self.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.output_name = self.output_prefix.name
 
 
@@ -154,7 +162,32 @@ class InferSinger:
         # only for correct tskit conversion
         self.apply_zero_convention = apply_zero_convention
         self.remove_invalid_mutations = remove_invalid_mutations
+        
+        #class variables for parallel (i.e. segment-merging) mode
+        if mode not in ("standard", "parallel"):
+            raise ValueError(
+                "mode must be either 'standard' or 'parallel'"
+            )
 
+        if length_of_segments_to_be_merged <= 0:
+            raise ValueError(
+                "length_of_segments_to_be_merged must be positive"
+            )
+
+        self.mode = mode
+
+        self.length_of_segments_to_be_merged = (
+            length_of_segments_to_be_merged
+        )
+
+        self.segments = segments
+
+        self.merge_arg_script = (
+            Path(merge_arg_script).resolve()
+            if merge_arg_script is not None
+            else self.singer_path / "merge_ARG.py"
+        )
+        self.max_workers = max_workers
 
     # poplabel metadata
     def _add_tree_sequence_metadata(self, ts_file, out_file):
@@ -256,23 +289,40 @@ class InferSinger:
 
 
     # MAIN run function
-
     def run(self):
 
-        print("Running SINGER")
+        print(f"Running SINGER in {self.mode} mode")
 
         if self.set_flip_to_ancestral_ref:
 
-            #if self.ref_to_ancestral:
-            ref_to_ancestral(self.vcf_file, self.vcf_file_final)
-            flip_to_ancestral_ref(self.vcf_file_final, self.vcf_file_final)
+            ref_to_ancestral(
+                self.vcf_file,
+                self.vcf_file_final
+            )
+
+            flip_to_ancestral_ref(
+                self.vcf_file_final,
+                self.vcf_file_final
+            )
 
         self._check_binaries()
 
-        self._run_singer()
+        if self.mode == "standard":
+
+            self._run_singer()
+
+        elif self.mode == "parallel":
+
+            self._run_singer_parallel()
+
 
         if self.convert_to_trees:
-            self._convert_to_trees()
+
+            if self.mode == "standard":
+                self._convert_to_trees()
+
+            elif self.mode == "parallel":
+                self._convert_merged_trees()
 
 
     # ======================================================
@@ -525,12 +575,18 @@ class InferSinger:
                 f"SINGER executable missing: {self.singer_bin}"
             )
 
-
         if self.convert_to_trees:
 
             if not self.convert_bin.exists():
                 raise FileNotFoundError(
                     f"SINGER converter missing: {self.convert_bin}"
+                )
+
+        if self.mode == "parallel":
+
+            if not self.merge_arg_script.exists():
+                raise FileNotFoundError(
+                    f"ARG merger missing: {self.merge_arg_script}"
                 )
             
     def _get_vcf_end(self):
@@ -588,3 +644,335 @@ class InferSinger:
 
 
         print("InferSinger process finished!")
+        
+        
+    # get end of segments etc    
+    def _get_segments(self):
+
+        if self.end is None:
+
+            if self.sequence_length is not None:
+                self.end = self.sequence_length
+            else:
+                self.end = self._get_vcf_end()
+
+        if self.segments is not None:
+
+            segments = self.segments
+
+        else:
+
+            segment_length = (
+                self.length_of_segments_to_be_merged
+            )
+
+            segments = [
+                (start, min(start + segment_length, self.end))
+                for start in range(self.start, self.end, segment_length)
+            ]
+
+        for start, end in segments:
+
+            if start < self.start or end > self.end or start >= end:
+                raise ValueError(
+                    f"Invalid genomic segment: {start}-{end}"
+                )
+
+        return segments
+        
+        
+
+    def _build_singer_command(
+        self,
+        start,
+        end,
+        output_prefix,
+    ):
+
+        cmd = [
+            str(self.singer_bin),
+
+            "-m", str(self.mutation_rate),
+
+            "-vcf", str(self.vcf_prefix_final),
+
+            "-output", str(output_prefix),
+
+            "-start", str(start),
+
+            "-end", str(end),
+
+            "-n", str(self.n_posterior_samples),
+
+            "-thin", str(self.thin),
+
+            "-polar", str(self.polarization),
+        ]
+
+        if self.Ne is not None:
+            cmd.extend(["-Ne", str(self.Ne)])
+
+        if self.recombination_map is not None:
+            cmd.extend([
+                "-recomb_map",
+                str(self.recombination_map)
+            ])
+
+        if self.mutation_map is not None:
+            cmd.extend([
+                "-mut_map",
+                str(self.mutation_map)
+            ])
+
+        else:
+            cmd.extend([
+                "-ratio",
+                str(self.ratio)
+            ])
+
+        return cmd
+        
+            
+            
+    def _run_singer_parallel(self):
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        print("\nRunning SINGER in parallel mode")
+
+        segments = self._get_segments()
+
+        # Load original tree sequence if provided
+        if self.original_ts is None:
+            original_ts = None
+
+        elif isinstance(self.original_ts, (str, Path)):
+            original_ts = tskit.load(self.original_ts)
+
+        else:
+            original_ts = self.original_ts
+
+        # Estimate Ne only once
+        if self.Ne_estimate_method == "diversity":
+
+            self.Ne = compute_eff_popsize_from_diversity(
+                mutation_rate=self.mutation_rate,
+                vcf_file=self.vcf_file_final,
+                ts=original_ts,
+                chr=self.chromosome
+            )
+
+        # Create a separate output prefix for each segment
+        segment_prefixes = []
+
+        for i, (start, end) in enumerate(segments):
+
+            segment_prefix = self.output_prefix.with_name(
+                f"{self.output_name}_segment_{i}"
+            )
+
+            segment_prefixes.append(segment_prefix)
+
+        # Run SINGER independently for each segment
+        def run_segment(args):
+
+            i, start, end, output_prefix = args
+
+            print(
+                f"\nRunning segment {i}: "
+                f"{start:,} - {end:,}"
+            )
+
+            cmd = self._build_singer_command(
+                start=start,
+                end=end,
+                output_prefix=output_prefix
+            )
+
+            self._run_command(
+                cmd,
+                f"SINGER segment {i}",
+                cwd=self.output_dir
+            )
+
+        tasks = [
+            (i, start, end, segment_prefixes[i])
+            for i, (start, end) in enumerate(segments)
+        ]
+
+        # Execute segments concurrently
+        with ThreadPoolExecutor(
+            max_workers=len(tasks)
+        ) as executor:
+
+            list(executor.map(run_segment, tasks))
+
+        print("\nAll SINGER segments finished!")
+
+        # Merge the resulting ARG samples
+        self._merge_ARG_samples(
+            segments=segments,
+            segment_prefixes=segment_prefixes
+        )
+        
+        
+    def _get_number_of_samples_from_prefix(self, prefix):
+
+        i = 0
+
+        while True:
+
+            node_file = Path(
+                f"{prefix}_nodes_{i}.txt"
+            )
+
+            if not node_file.exists():
+                break
+
+            i += 1
+
+        if i == 0:
+            raise FileNotFoundError(
+                f"No SINGER node files found for prefix {prefix}"
+            )
+
+        return i
+        
+
+    def _merge_ARG_samples(
+        self,
+        segments,
+        segment_prefixes
+    ):
+
+        import sys
+
+        print("\nPreparing ARG merging")
+
+        if not self.merge_arg_script.exists():
+            raise FileNotFoundError(
+                f"merge_ARG.py not found: {self.merge_arg_script}"
+            )
+
+        # Determine number of posterior samples
+        n_samples = self._get_number_of_samples_from_prefix(
+            segment_prefixes[0]
+        )
+
+        # Check that all segments produced the same number of samples
+        for prefix in segment_prefixes:
+
+            n_segment_samples = (
+                self._get_number_of_samples_from_prefix(prefix)
+            )
+
+            if n_segment_samples != n_samples:
+                raise ValueError(
+                    f"Inconsistent number of ARG samples: "
+                    f"{prefix} has {n_segment_samples}, "
+                    f"expected {n_samples}"
+                )
+
+        # Generate file table
+        file_table = self.output_prefix.with_name(
+            f"{self.output_name}_merge_file_table.txt"
+        )
+
+        with open(file_table, "w") as f:
+
+            for sample_idx in range(n_samples):
+
+                for segment_idx, (
+                    segment_prefix,
+                    (start, end)
+                ) in enumerate(zip(segment_prefixes, segments)):
+
+                    nodes_file = Path(
+                        f"{segment_prefix}_nodes_{sample_idx}.txt"
+                    )
+
+                    branches_file = Path(
+                        f"{segment_prefix}_branches_{sample_idx}.txt"
+                    )
+
+                    muts_file = Path(
+                        f"{segment_prefix}_muts_{sample_idx}.txt"
+                    )
+
+                    for filename in (
+                        nodes_file,
+                        branches_file,
+                        muts_file
+                    ):
+
+                        if not filename.exists():
+                            raise FileNotFoundError(
+                                f"Missing SINGER output: {filename}"
+                            )
+
+                    f.write(
+                        f"{nodes_file} "
+                        f"{branches_file} "
+                        f"{muts_file} "
+                        f"{start}\n"
+                    )
+
+        print(f"Created merge file table: {file_table}")
+
+        # Merge ARG samples
+        merged_ts_file = self.output_prefix.with_suffix(".trees")
+
+        cmd = [
+            sys.executable,
+            str(self.merge_arg_script),
+            "--file_table",
+            str(file_table),
+            "--output",
+            str(merged_ts_file)
+        ]
+
+        self._run_command(
+            cmd,
+            "Merge ARG samples",
+            cwd=self.output_dir
+        )
+
+        if not merged_ts_file.exists():
+            raise FileNotFoundError(
+                f"Merged tree sequence was not created: {merged_ts_file}"
+            )
+
+        self.merged_ts_file = merged_ts_file
+
+        print("\nARG merging finished!")
+        
+
+    def _convert_merged_trees(self):
+
+        merged_ts_file = self.output_prefix.with_suffix(".trees")
+
+        if not merged_ts_file.exists():
+            raise FileNotFoundError(
+                f"Merged tree sequence not found: {merged_ts_file}"
+            )
+
+        if not self.add_metadata:
+            return [merged_ts_file]
+
+        if self.poplabels_file is None:
+            raise ValueError(
+                "add_metadata=True but no poplabels_file was provided."
+            )
+
+        metadata_file = merged_ts_file.with_name(
+            f"{merged_ts_file.stem}.metadata.trees"
+        )
+
+        self._add_tree_sequence_metadata(
+            ts_file=merged_ts_file,
+            out_file=metadata_file
+        )
+
+        os.replace(metadata_file, merged_ts_file)
+
+        return [merged_ts_file]
